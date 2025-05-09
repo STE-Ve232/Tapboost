@@ -58,14 +58,14 @@ export default function TapToEarn() {
 
   const handleTap = () => {
     setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 0.001);
-    showAppNotification('Tap earned +$0.001!');
+    setEarnings(prev => prev + 1.501);
+    showAppNotification('Tap earned +$1.501!');
   };
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
     setEarnings(prev => prev + 0.005);
-    showAppNotification('Referral bonus +$0.005 earned!');
+    showAppNotification('Referral bonus +$0.505 earned!');
   };
 
   const claimDailyBonus = () => {

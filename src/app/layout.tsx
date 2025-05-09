@@ -1,8 +1,9 @@
+
+// No "use client" here
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
-import ServiceWorkerRegistrar from '@/components/service-worker-registrar';
+import LayoutClientContent from '@/components/layout-client-content'; // New component
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -39,9 +40,9 @@ export default function RootLayout({
       <body 
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col items-center box-border overflow-y-auto`}
       >
-        {children}
-        <Toaster />
-        <ServiceWorkerRegistrar />
+        <LayoutClientContent>
+          {children}
+        </LayoutClientContent>
       </body>
     </html>
   );

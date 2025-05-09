@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import UserProfile from "@/components/UserProfile"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -354,6 +355,8 @@ const SidebarHeader = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+  
+
   return (
     <div
       ref={ref}
@@ -361,6 +364,9 @@ const SidebarHeader = React.forwardRef<
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
     />
+
+    
+
   )
 })
 SidebarHeader.displayName = "SidebarHeader"
@@ -369,6 +375,11 @@ const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+
+   return (
+    <div className={cn("flex flex-col gap-2 p-2", className)} ref={ref} {...props} data-sidebar="header">
+      <UserProfile username="Test User" points={1000} />
+      {props.children}
   return (
     <div
       ref={ref}
