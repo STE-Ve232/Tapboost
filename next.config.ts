@@ -1,6 +1,8 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'export', // Added for static HTML export
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
@@ -17,6 +19,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    unoptimized: true, // Required for 'output: export' with next/image
   },
 };
 
