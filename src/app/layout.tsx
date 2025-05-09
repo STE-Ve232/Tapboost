@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body 
+      <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col items-center box-border overflow-y-auto`}
       >
         <LayoutClientContent>
