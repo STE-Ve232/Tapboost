@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,7 +19,7 @@ interface LeaderboardEntry {
 }
 
 const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-  // Mock API call as in the original script
+  // Mock API call
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve([
@@ -62,14 +63,14 @@ export default function TapToEarn() {
 
   const handleTap = () => {
     setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 1.501);
-    showAppNotification('Tap earned +$1.501!');
+    setEarnings(prev => prev + 0.001); // Adjusted earning rate
+    showAppNotification('Tap earned +$0.001!');
   };
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
     setEarnings(prev => prev + 0.005);
-    showAppNotification('Referral bonus +$0.505 earned!');
+    showAppNotification('Referral bonus +$0.005 earned!');
   };
 
   const claimDailyBonus = () => {
@@ -104,9 +105,9 @@ export default function TapToEarn() {
         const withdrawalAmount = earnings;
         setEarnings(0);
         setIsLoading(false);
-        showAppNotification(`Withdrawal of $${withdrawalAmount.toFixed(2)} requested to ${destination} via ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto'}`);
-        setPaypalEmail(''); // Clear email after request
-        setCryptoWalletAddress(''); // Clear wallet address after request
+        showAppNotification(`Withdrawal of $${withdrawalAmount.toFixed(3)} requested to ${destination} via ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto Wallet'}.`);
+        setPaypalEmail(''); 
+        setCryptoWalletAddress('');
       }, 1000);
     } else {
       showAppNotification(errorMessage.trim(), 'error');
@@ -152,7 +153,7 @@ export default function TapToEarn() {
               onClick={handleTap}
               disabled={isLoading}
               className="w-full py-3 text-base sm:text-lg"
-              aria-label="Tap to earn $1.501"
+              aria-label="Tap to earn $0.001"
             >
               <MousePointerClick className="mr-2 h-5 w-5" /> Tap & Earn ($0.001)
             </Button>
@@ -222,7 +223,7 @@ export default function TapToEarn() {
               onClick={handleWithdraw}
               disabled={isWithdrawButtonDisabled}
               className="w-full py-3 text-base sm:text-lg"
-              aria-label={`Withdraw earnings to ${withdrawalMethod}`}
+              aria-label={`Withdraw earnings to ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto Wallet'}`}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
