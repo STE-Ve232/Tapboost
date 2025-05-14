@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   title: 'TapBoost - Tap to Earn',
   description: 'Tap to Earn - Earn rewards by tapping and referring friends!',
   manifest: '/manifest.json',
-  themeColor: '#f5f7fa',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -29,6 +28,12 @@ export const metadata: Metadata = {
     apple: '/icon-192x192.png',
   },
 };
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#f5f7fa',
+}
 
 export default function RootLayout({
   children,

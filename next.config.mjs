@@ -1,6 +1,4 @@
 
-import type {NextConfig} from 'next';
-
 // Determine if the app is running on GitHub Actions
 const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
 
@@ -24,7 +22,7 @@ if (isGithubActions && repoName && repoName !== 'YOUR_REPOSITORY_NAME') {
 }
 
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   output: 'export',
   assetPrefix: assetPrefix,
   basePath: basePath,

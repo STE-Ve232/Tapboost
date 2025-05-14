@@ -82,3 +82,5 @@ tsconfig.tsbuildinfo
 
 # Next.js telemetry
 next-telemetry.txt
+# Local Netlify folder
+.netlify

@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import LeaderboardCard from '@/components/leaderboard-card';
 import NotificationAlert from '@/components/notification-alert';
 import { Coins, Users, Gift, Send, MousePointerClick } from 'lucide-react';
@@ -20,10 +22,10 @@ const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve([
-        { name: "Alice", earnings: 10.50 },
-        { name: "Bob", earnings: 8.20 },
-        { name: "Charlie", earnings: 6.80 },
-        { name: "David", earnings: 5.50 },
+        { name: "Steve", earnings: 10.50 },
+        { name: "Rihana", earnings: 8.20 },
+        { name: "Juliet", earnings: 6.80 },
+        { name: "Odiwuor", earnings: 5.50 },
         { name: "Eve", earnings: 4.20 },
       ]);
     }, 500);
@@ -36,6 +38,8 @@ export default function TapToEarn() {
   const [referrals, setReferrals] = useState(0);
   const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
   const [paypalEmail, setPaypalEmail] = useState('');
+  const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
+  const [withdrawalMethod, setWithdrawalMethod] = useState<'paypal' | 'crypto'>('paypal');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -79,21 +83,37 @@ export default function TapToEarn() {
   };
 
   const handleWithdraw = () => {
-    if (earnings >= 5.0 && paypalEmail) {
+    let isValid = false;
+    let destination = '';
+    let errorMessage = '';
+
+    if (earnings < 5.0) {
+      errorMessage += 'Minimum $5.00 earnings required. ';
+    } else if (withdrawalMethod === 'paypal' && !paypalEmail) {
+      errorMessage += 'Valid PayPal email required.';
+    } else if (withdrawalMethod === 'crypto' && !cryptoWalletAddress) {
+      errorMessage += 'Valid crypto wallet address required.';
+    } else {
+      isValid = true;
+      destination = withdrawalMethod === 'paypal' ? paypalEmail : cryptoWalletAddress;
+    }
+
+    if (isValid) {
       setIsLoading(true);
-      setTimeout(() => {
+      setTimeout(() => { 
+        const withdrawalAmount = earnings;
         setEarnings(0);
         setIsLoading(false);
-        showAppNotification(`Withdrawal of $${(earnings).toFixed(2)} requested to ${paypalEmail}`);
+        showAppNotification(`Withdrawal of $${withdrawalAmount.toFixed(2)} requested to ${destination} via ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto'}`);
         setPaypalEmail(''); // Clear email after request
+        setCryptoWalletAddress(''); // Clear wallet address after request
       }, 1000);
     } else {
-      let errorMessage = '';
-      if (earnings < 5.0) errorMessage += 'Minimum $5.00 earnings required. ';
-      if (!paypalEmail) errorMessage += 'Valid PayPal email required.';
       showAppNotification(errorMessage.trim(), 'error');
     }
   };
+
+  const isWithdrawButtonDisabled = isLoading || earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && !cryptoWalletAddress);
 
   return (
     <div className="flex flex-col items-center w-full space-y-6">
@@ -132,7 +152,7 @@ export default function TapToEarn() {
               onClick={handleTap}
               disabled={isLoading}
               className="w-full py-3 text-base sm:text-lg"
-              aria-label="Tap to earn $0.001"
+              aria-label="Tap to earn $1.501"
             >
               <MousePointerClick className="mr-2 h-5 w-5" /> Tap & Earn ($0.001)
             </Button>
@@ -161,22 +181,48 @@ export default function TapToEarn() {
 
           <div className="space-y-2 pt-4 border-t mt-4">
             <h3 className="text-lg font-semibold text-muted-foreground">Withdraw Earnings</h3>
-            <Input
-              type="email"
-              placeholder="Enter PayPal Email"
-              value={paypalEmail}
-              onChange={(e) => setPaypalEmail(e.target.value)}
-              disabled={isLoading}
-              className="text-base"
-              aria-label="PayPal email for withdrawal"
-            />
+
+            <Select onValueChange={(value: "paypal" | "crypto") => setWithdrawalMethod(value)} defaultValue="paypal" disabled={isLoading}>
+              <SelectTrigger className="w-full text-base">
+                <SelectValue placeholder="Select withdrawal method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paypal">PayPal</SelectItem>
+                <SelectItem value="crypto">Crypto Wallet</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {withdrawalMethod === 'paypal' && (
+              <Input
+                type="email"
+                placeholder="Enter PayPal Email"
+                value={paypalEmail}
+                onChange={(e) => setPaypalEmail(e.target.value)}
+                disabled={isLoading}
+                className="text-base"
+                aria-label="PayPal email for withdrawal"
+              />
+            )}
+
+            {withdrawalMethod === 'crypto' && (
+              <Input
+                type="text"
+                placeholder="Enter Crypto Wallet Address"
+                value={cryptoWalletAddress}
+                onChange={(e) => setCryptoWalletAddress(e.target.value)}
+                disabled={isLoading}
+                className="text-base"
+                aria-label="Crypto wallet address for withdrawal"
+              />
+            )}
+
             <motion.div whileTap={{ scale: 0.95 }} className="w-full">
             <Button
               variant="destructive"
               onClick={handleWithdraw}
-              disabled={earnings < 5.0 || !paypalEmail || isLoading}
+              disabled={isWithdrawButtonDisabled}
               className="w-full py-3 text-base sm:text-lg"
-              aria-label="Withdraw earnings to PayPal"
+              aria-label={`Withdraw earnings to ${withdrawalMethod}`}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -187,11 +233,11 @@ export default function TapToEarn() {
                   Processing...
                 </div>
               ) : (
-                <><Send className="mr-2 h-5 w-5" /> Withdraw to PayPal</>
+                <><Send className="mr-2 h-5 w-5" /> Withdraw</>
               )}
             </Button>
             </motion.div>
-            { (earnings < 5.0 || !paypalEmail) && <p className="text-xs text-muted-foreground mt-1">Minimum $5.00 to withdraw. PayPal email required.</p>}
+            { (earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && !cryptoWalletAddress)) && <p className="text-xs text-muted-foreground mt-1">Minimum $5.00 to withdraw. {withdrawalMethod === 'paypal' ? 'PayPal email' : 'Crypto wallet address'} required.</p>}
           </div>
         </CardContent>
       </Card>
