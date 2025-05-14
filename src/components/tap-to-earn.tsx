@@ -42,7 +42,7 @@ export default function TapToEarn() {
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [withdrawalMethod, setWithdrawalMethod] = useState<'paypal' | 'crypto'>('paypal');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Used for leaderboard and withdrawal loading states
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const { toast } = useToast();
 
@@ -58,12 +58,12 @@ export default function TapToEarn() {
 
   const showAppNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 3000); // Notification stays for 3 seconds
   }, []);
 
   const handleTap = () => {
     setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 0.001); // Adjusted earning rate
+    setEarnings(prev => prev + 0.001); 
     showAppNotification('Tap earned +$0.001!');
   };
 
@@ -78,39 +78,61 @@ export default function TapToEarn() {
       setEarnings(prev => prev + 0.02);
       setDailyBonusClaimed(true);
       showAppNotification('Daily bonus +$0.02 claimed!');
-      // Reset bonus availability after 24 hours (simplified)
-      setTimeout(() => setDailyBonusClaimed(false), 24 * 60 * 60 * 1000);
+      setTimeout(() => setDailyBonusClaimed(false), 24 * 60 * 60 * 1000); // Reset after 24h
     }
   };
 
-  const handleWithdraw = () => {
-    let isValid = false;
-    let destination = '';
-    let errorMessage = '';
-
+  const handleWithdraw = async () => {
     if (earnings < 5.0) {
-      errorMessage += 'Minimum $5.00 earnings required. ';
-    } else if (withdrawalMethod === 'paypal' && !paypalEmail) {
-      errorMessage += 'Valid PayPal email required.';
-    } else if (withdrawalMethod === 'crypto' && !cryptoWalletAddress) {
-      errorMessage += 'Valid crypto wallet address required.';
-    } else {
-      isValid = true;
-      destination = withdrawalMethod === 'paypal' ? paypalEmail : cryptoWalletAddress;
+      showAppNotification('Minimum $5.00 earnings required to withdraw.', 'error');
+      return;
+    }
+    if (withdrawalMethod === 'paypal' && !paypalEmail) {
+      showAppNotification('Valid PayPal email required for withdrawal.', 'error');
+      return;
+    }
+    if (withdrawalMethod === 'crypto' && !cryptoWalletAddress) {
+      showAppNotification('Valid crypto wallet address required for withdrawal.', 'error');
+      return;
     }
 
-    if (isValid) {
-      setIsLoading(true);
-      setTimeout(() => { 
-        const withdrawalAmount = earnings;
-        setEarnings(0);
-        setIsLoading(false);
-        showAppNotification(`Withdrawal of $${withdrawalAmount.toFixed(3)} requested to ${destination} via ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto Wallet'}.`);
-        setPaypalEmail(''); 
+    setIsLoading(true);
+    try {
+      let endpoint = '';
+      let payload: any = {};
+      const withdrawalAmount = earnings;
+
+      if (withdrawalMethod === 'paypal') {
+        endpoint = '/api/withdraw/paypal';
+        payload = { email: paypalEmail, amount: withdrawalAmount };
+      } else { // crypto
+        endpoint = '/api/withdraw/crypto';
+        payload = { walletAddress: cryptoWalletAddress, amount: withdrawalAmount };
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showAppNotification(result.message || `Withdrawal of $${withdrawalAmount.toFixed(3)} successfully requested.`, 'success');
+        setEarnings(0); 
+        setPaypalEmail('');
         setCryptoWalletAddress('');
-      }, 1000);
-    } else {
-      showAppNotification(errorMessage.trim(), 'error');
+      } else {
+        showAppNotification(result.message || 'Withdrawal request failed. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Withdrawal API call failed:', error);
+      showAppNotification('An error occurred while processing your withdrawal. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -243,7 +265,7 @@ export default function TapToEarn() {
         </CardContent>
       </Card>
 
-      <LeaderboardCard leaderboard={leaderboard} isLoading={isLoading} />
+      <LeaderboardCard leaderboard={leaderboard} isLoading={isLoading && leaderboard.length === 0} />
     </div>
   );
 }
