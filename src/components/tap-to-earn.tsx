@@ -63,13 +63,13 @@ export default function TapToEarn() {
 
   const handleTap = () => {
     setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 0.001); 
-    showAppNotification('Tap earned +$0.001!');
+    setEarnings(prev => prev + 1.501); 
+    showAppNotification('Tap earned +$1.501!');
   };
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
-    setEarnings(prev => prev + 0.005);
+    setEarnings(prev => prev + 1.501);
     showAppNotification('Referral bonus +$0.005 earned!');
   };
 
@@ -175,7 +175,7 @@ export default function TapToEarn() {
               onClick={handleTap}
               disabled={isLoading}
               className="w-full py-3 text-base sm:text-lg"
-              aria-label="Tap to earn $0.001"
+              aria-label="Tap to earn $1.501"
             >
               <MousePointerClick className="mr-2 h-5 w-5" /> Tap & Earn ($0.001)
             </Button>
