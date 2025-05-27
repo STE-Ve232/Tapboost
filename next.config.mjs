@@ -23,7 +23,6 @@ if (isGithubActions && repoName && repoName !== 'YOUR_REPOSITORY_NAME') {
 
 
 const nextConfig = {
-  output: 'export',
   assetPrefix: assetPrefix,
   basePath: basePath,
   /* config options here */

@@ -40,6 +40,7 @@ export default function TapToEarn() {
   const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
   const [paypalEmail, setPaypalEmail] = useState('');
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
+  const [cryptoAsset, setCryptoAsset] = useState<'BTC' | 'ETH' | 'USDT' | 'USDC'>('BTC');
   const [withdrawalMethod, setWithdrawalMethod] = useState<'paypal' | 'crypto'>('paypal');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false); // Used for leaderboard and withdrawal loading states
@@ -69,7 +70,7 @@ export default function TapToEarn() {
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
-    setEarnings(prev => prev + 1.501);
+    setEarnings(prev => prev + 1.501  );
     showAppNotification('Referral bonus +$0.005 earned!');
   };
 
@@ -95,6 +96,10 @@ export default function TapToEarn() {
       showAppNotification('Valid crypto wallet address required for withdrawal.', 'error');
       return;
     }
+    if (withdrawalMethod === 'crypto' && !cryptoAsset) {
+ showAppNotification('Please select a cryptocurrency asset for withdrawal.', 'error');
+ return;
+    }
 
     setIsLoading(true);
     try {
@@ -107,7 +112,7 @@ export default function TapToEarn() {
         payload = { email: paypalEmail, amount: withdrawalAmount };
       } else { // crypto
         endpoint = '/api/withdraw/crypto';
-        payload = { walletAddress: cryptoWalletAddress, amount: withdrawalAmount };
+        payload = { walletAddress: cryptoWalletAddress, amount: withdrawalAmount, asset: cryptoAsset };
       }
 
       const response = await fetch(endpoint, {
@@ -121,7 +126,10 @@ export default function TapToEarn() {
       const result = await response.json();
 
       if (response.ok) {
-        showAppNotification(result.message || `Withdrawal of $${withdrawalAmount.toFixed(3)} successfully requested.`, 'success');
+        const successMessage = withdrawalMethod === 'paypal'
+ ? `Withdrawal of $${withdrawalAmount.toFixed(2)} to ${paypalEmail} successfully requested.`
+ : `Withdrawal of ${withdrawalAmount.toFixed(8)} ${cryptoAsset} to ${cryptoWalletAddress} successfully requested.`;
+ showAppNotification(result.message || successMessage, 'success');
         setEarnings(0); 
         setPaypalEmail('');
         setCryptoWalletAddress('');
@@ -136,7 +144,7 @@ export default function TapToEarn() {
     }
   };
 
-  const isWithdrawButtonDisabled = isLoading || earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && !cryptoWalletAddress);
+  const isWithdrawButtonDisabled = isLoading || earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && (!cryptoWalletAddress || !cryptoAsset));
 
   return (
     <div className="flex flex-col items-center w-full space-y-6">
@@ -214,6 +222,20 @@ export default function TapToEarn() {
                 <SelectItem value="crypto">Crypto Wallet</SelectItem>
               </SelectContent>
             </Select>
+            
+            {withdrawalMethod === 'crypto' && (
+ <Select onValueChange={(value: "BTC" | "ETH" | "USDT" | "USDC") => setCryptoAsset(value)} defaultValue="BTC" disabled={isLoading}>
+ <SelectTrigger className="w-full text-base">
+ <SelectValue placeholder="Select cryptocurrency" />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
+ <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
+ <SelectItem value="USDT">Tether (USDT)</SelectItem>
+ <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
+ </SelectContent>
+ </Select>
+            )}
 
             {withdrawalMethod === 'paypal' && (
               <Input
@@ -260,7 +282,7 @@ export default function TapToEarn() {
               )}
             </Button>
             </motion.div>
-            { (earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && !cryptoWalletAddress)) && <p className="text-xs text-muted-foreground mt-1">Minimum $5.00 to withdraw. {withdrawalMethod === 'paypal' ? 'PayPal email' : 'Crypto wallet address'} required.</p>}
+            { (earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && (!cryptoWalletAddress || !cryptoAsset))) && <p className="text-xs text-muted-foreground mt-1">Minimum $5.00 to withdraw. {withdrawalMethod === 'paypal' ? 'PayPal email' : 'Crypto wallet address and asset'} required.</p>}
           </div>
         </CardContent>
       </Card>

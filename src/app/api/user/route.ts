@@ -1,34 +1,73 @@
+export const dynamic = 'auto';
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { authenticateUser } from '@/lib/auth-utils';
+import { getUserProfile } from '@/lib/db-utils';
+import { rateLimiter } from '@/lib/rate-limiter';
+import { UserProfile } from '@/types/user';
 
-interface UserData {
-  username: string;
-  points: number;
-  avatarUrl: string;
-}
+export async function GET(request: NextRequest) {
+  // Rate limiting
+  const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1';
+  const rateLimitResult = await rateLimiter.limit(ip);
+  
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { message: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': rateLimitResult.retryAfter.toString() } }
+    );
+  }
 
-export async function GET(request: Request) {
+  // Authentication
+  const authResult = await authenticateUser(request);
+  if (!authResult.authenticated) {
+    return NextResponse.json(
+      { message: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
+  const userId = authResult.userId;
+
   try {
-    // In a real application, you would fetch this data from a database or authentication service.
-    // For now, we'll return mock data that aligns with what UserProfile.tsx expects.
-    const mockUserData: UserData = {
-      username: 'TapUser123',
-      points: 1500,
-      avatarUrl: 'https://placehold.co/150x150.png', // Using placehold.co as per guidelines
+    // Fetch user data from database
+    const userData: UserProfile | null = await getUserProfile(userId);
+
+    if (!userData) {
+      return NextResponse.json(
+        { message: 'User profile not found' },
+        { status: 404 }
+      );
+    }
+
+    // Sanitize data before sending to client
+    const responseData = {
+      username: userData.username,
+      points: userData.loyaltyPoints,
+      avatarUrl: userData.avatarUrl || 'https://placehold.co/150x150.png',
+      // Add other non-sensitive profile data as needed
+      joinDate: userData.createdAt,
+      tier: userData.membershipTier
     };
 
-    return NextResponse.json(mockUserData);
+    // Set cache headers (adjust based on your needs)
+    const cacheHeaders = {
+      'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+    };
+
+    return NextResponse.json(responseData, { headers: cacheHeaders });
 
   } catch (error) {
-    // Log the error on the server for debugging purposes
+    // Log detailed error for internal monitoring
     console.error('Error in /api/user GET handler:', error);
+    // await logErrorToMonitoringSystem(error, { userId, endpoint: '/api/user' });
 
-    // Return a structured error response to the client
-    // This ensures the client gets a JSON response even if an unexpected server error occurs.
+    // Return appropriate error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
     return NextResponse.json(
       { 
-        message: 'An unexpected error occurred on the server while fetching user data.', 
-        errorDetails: (error instanceof Error) ? error.message : 'Unknown server error' 
+        message: 'An unexpected error occurred while fetching user data.',
+        errorDetails: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       },
       { status: 500 }
     );
