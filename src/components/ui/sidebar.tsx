@@ -370,22 +370,16 @@ const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
-  // Assuming UserProfileProps is defined elsewhere and includes username (string) and points (number)
-  type UserProfileProps = {
-      username: string;
-      points: number;
-      // Add any other props UserProfile might accept
-  }
-
-  const userProfileProps: UserProfileProps = {
-      username: "Test User",
-      points: 1000
-  }
   return (
-    <div className={cn("flex flex-col gap-2 p-2", className)} ref={ref} {...props} data-sidebar="footer">
-      <UserProfile {...userProfileProps} />
+    <div
+      ref={ref}
+      data-sidebar="footer"
+      className={cn("flex flex-col gap-2 p-2", className)}
+      {...props}
+    >
+      <UserProfile />
       {props.children}
-  </div>
+    </div>
   )
 })
 SidebarFooter.displayName = "SidebarFooter"
