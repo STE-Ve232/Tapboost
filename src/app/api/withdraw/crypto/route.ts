@@ -7,6 +7,7 @@ import { rateLimiter } from '@/lib/rate-limiter';
 
 // Supported cryptocurrencies
 const SUPPORTED_ASSETS = ['BTC', 'ETH', 'USDT', 'USDC'];
+import { verifyTwoFactorCode } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest) {
   // Rate limiting
@@ -65,7 +66,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      // Verify 2FA code here
+      const twoFactorVerificationResult = await verifyTwoFactorCode(userId, twoFactorCode);
+      if (!twoFactorVerificationResult.success) {
+        return NextResponse.json(
+          { message: twoFactorVerificationResult.message },
+          { status: 401 }
+        );
+      }
     }
 
     // Wallet address validation
