@@ -1,146 +1,53 @@
-# TapBoost - Tap to Earn
 
-This is a Next.js "Tap to Earn" Progressive Web Application (PWA) where users can earn points by tapping, referring friends, and claiming daily bonuses. The application features a leaderboard and a mock withdrawal system.
+# TapBoost - MiniPay Tap to Earn
 
-## Features
+A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Celo network. Earn real rewards by tapping, with automated payouts directly to your wallet.
 
-- **Tap to Earn:** Users earn points for each tap.
-- **Referral System:** Users earn bonus points for referring new users (mocked).
-- **Daily Bonus:** Users can claim a daily bonus.
-- **Withdrawal System:** Users can request to withdraw their earnings to a PayPal account (mocked, requires minimum earnings).
-- **Leaderboard:** Displays top earners.
-- **PWA Ready:** Includes a manifest.json and a service worker for offline capabilities and installability.
-- **Responsive Design:** Adapts to different screen sizes.
-- **ShadCN UI Components:** Utilizes modern and accessible UI components.
-- **Next.js 15 App Router:** Built with the latest Next.js features for optimal performance.
+## 🚀 Deployment to Vercel
 
-## Getting Started
+This app is optimized for Vercel. Follow these steps to go live:
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+1. **Push to GitHub:**
+   - Initialize a git repo: `git init`
+   - Add all files: `git add .`
+   - Commit: `git commit -m "Initial commit"`
+   - Create a repo on GitHub and push.
 
-### Prerequisites
+2. **Connect to Vercel:**
+   - Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
+   - Import your GitHub repository.
 
-- [Node.js](https://nodejs.org/) (version 20 or later recommended)
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+3. **Configure Environment Variables:**
+   In the Vercel project settings, add the following variables:
 
-### Installation
+   **Firebase (Public):**
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`: Your Firebase Web API Key
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`: e.g., `your-project.firebaseapp.com`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`: Your Project ID
+   - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`: `your-project.appspot.com`
+   - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`: From Firebase settings
+   - `NEXT_PUBLIC_FIREBASE_APP_ID`: From Firebase settings
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
-    cd YOUR_REPOSITORY_NAME
-    ```
-    (Replace `YOUR_USERNAME` and `YOUR_REPOSITORY_NAME` with your actual GitHub username and repository name)
+   **Blockchain (Secret):**
+   - `TREASURY_PRIVATE_KEY`: The 0x... private key of the wallet that will send rewards. **(Keep this secret!)**
 
-2.  **Install dependencies:**
-    Using npm:
-    ```bash
-    npm install
-    ```
-    Or using yarn:
-    ```bash
-    yarn install
-    ```
+4. **Deploy:** Click **Deploy**. Vercel will build the app and provide a URL.
 
-### Running the Development Server
+## 📱 Adding to MiniPay
 
-Once the dependencies are installed, you can start the development server:
+Once deployed:
+1. Copy your Vercel URL (e.g., `https://tapboost.vercel.app`).
+2. Open the **MiniPay Developer Console**.
+3. Create a new Mini App and paste your URL.
+4. Test it directly inside your MiniPay wallet!
 
-Using npm:
-```bash
-npm run dev
-```
-Or using yarn:
-```bash
-yarn dev
-```
+## 🛠 Features
 
-This will start the development server, usually on `http://localhost:9002`. Open this URL in your browser to see the application.
+- **Auto-Wallet Connect:** Seamlessly connects to MiniPay on load.
+- **Real-time Firestore DB:** All taps and earnings are saved permanently.
+- **Celo Blockchain Payouts:** Real-time stablecoin transfers (USDT/USDC/cUSD).
+- **PWA Support:** Installable and optimized for mobile performance.
 
-## Building for Production
+## 🛡 Security Note
 
-To create a production build of the application:
-
-Using npm:
-```bash
-npm run build
-```
-Or using yarn:
-```bash
-yarn build
-```
-
-This command generates an optimized version of your application in the `.next` folder.
-
-## Exporting as a Static Site (for GitHub Pages)
-
-If you intend to deploy to a static hosting provider like GitHub Pages:
-
-1.  **Configure `next.config.js`:**
-    Ensure `output: 'export'` is set in your `next.config.js`.
-    If deploying to a repository named `your-username.github.io/<reponame>`, you'll need to set `basePath` and `assetPrefix` in `next.config.js`. See the comments in that file for details.
-
-    The `next.config.js` has been updated to automatically handle `basePath` and `assetPrefix` when `GITHUB_ACTIONS` environment variable is true and `repoName` is correctly set.
-    **Important:** Make sure to replace `'YOUR_REPOSITORY_NAME'` in `next.config.js` with your actual repository name if it's not a user/org page (e.g., `your-username.github.io`).
-
-2.  **Run the build and export commands:**
-    Using npm:
-    ```bash
-    npm run build
-    npm run export
-    ```
-    Or using yarn:
-    ```bash
-    yarn build
-    yarn export
-    ```
-    This will generate the static files in the `out` directory.
-
-## Deployment to GitHub Pages
-
-This project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automates the build and deployment process to GitHub Pages when changes are pushed to the `main` branch.
-
-**Manual Deployment Steps (if not using GitHub Actions or for understanding):**
-
-1.  Ensure your `next.config.js` is correctly configured for `basePath` and `assetPrefix` if your repository is not `username.github.io`.
-2.  Build and export the application: `npm run build && npm run export`.
-3.  Create a `.nojekyll` file in the `out` directory: `touch ./out/.nojekyll`.
-4.  Push the contents of the `out` directory to the `gh-pages` branch of your repository.
-5.  Configure GitHub Pages in your repository settings to deploy from the `gh-pages` branch and the `/ (root)` folder.
-
-## Technologies Used
-
--   [Next.js](https://nextjs.org/) - React framework for production
--   [React](https://reactjs.org/) - JavaScript library for building user interfaces
--   [TypeScript](https://www.typescriptlang.org/) - Superset of JavaScript for static typing
--   [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
--   [ShadCN UI](https://ui.shadcn.com/) - Re-usable components built using Radix UI and Tailwind CSS
--   [Lucide React](https://lucide.dev/) - Icon library
--   [Framer Motion](https://www.framer.com/motion/) - Animation library
--   [Genkit (Firebase Genkit)](https://firebase.google.com/docs/genkit) - For AI-powered features (if any are added)
--   [GitHub Actions](https://github.com/features/actions) - For CI/CD and automated deployment
-
-## Project Structure
-
--   `src/app/`: Contains the main application routes and layout (App Router).
--   `src/components/`: Reusable UI components.
-    -   `src/components/ui/`: ShadCN UI components.
--   `src/context/`: React Context providers.
--   `src/hooks/`: Custom React hooks.
--   `src/lib/`: Utility functions.
--   `src/ai/`: Genkit related AI flows and configurations (if used).
--   `public/`: Static assets, including `manifest.json` and `service-worker.js`.
--   `next.config.js`: Next.js configuration file.
--   `tailwind.config.ts`: Tailwind CSS configuration.
--   `tsconfig.json`: TypeScript configuration.
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-## License
-
-This project is licensed under the MIT License - see the `LICENSE.md` file for details (if one exists).
-If no `LICENSE.md` file is present, the project is unlicensed and all rights are reserved.
+The `TREASURY_PRIVATE_KEY` is handled exclusively on the server side (`src/app/api/withdraw/crypto/route.ts`). Never expose this key in files starting with `NEXT_PUBLIC_`.
