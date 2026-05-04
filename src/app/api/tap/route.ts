@@ -1,4 +1,6 @@
+
 export const dynamic = 'force-dynamic';
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
 import { incrementUserPoints } from '@/lib/db-utils';
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
     await incrementUserPoints(authResult.userId, 1, 0.001);
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Tap API error:', error);
     return NextResponse.json({ message: 'Tap sync failed' }, { status: 500 });
   }
 }

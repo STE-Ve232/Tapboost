@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const userData = await getUserProfile(authResult.userId);
     return NextResponse.json(userData);
   } catch (error) {
+    console.error('User API error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

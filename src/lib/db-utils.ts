@@ -4,6 +4,8 @@ import { doc, getDoc, setDoc, updateDoc, increment, collection, query, orderBy, 
 import { UserProfile, Transaction } from '@/types/user';
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  if (!db) return null;
+  
   const userRef = doc(db, 'users', userId);
   const userSnap = await getDoc(userRef);
 
@@ -25,6 +27,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 }
 
 export async function incrementUserPoints(userId: string, points: number, earnings: number) {
+  if (!db) return;
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, {
     points: increment(points),
@@ -38,6 +41,7 @@ export async function checkUserBalance(userId: string, amount: number): Promise<
 }
 
 export async function recordTransaction(transaction: Partial<Transaction>): Promise<void> {
+  if (!db) return;
   const txRef = doc(collection(db, 'transactions'));
   await setDoc(txRef, {
     ...transaction,
@@ -46,11 +50,17 @@ export async function recordTransaction(transaction: Partial<Transaction>): Prom
 }
 
 export async function getLeaderboardData(): Promise<any[]> {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, orderBy('earnings', 'desc'), limit(10));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    name: doc.data().username,
-    earnings: doc.data().earnings || 0
-  }));
+  if (!db) return [];
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, orderBy('earnings', 'desc'), limit(10));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      name: doc.data().username,
+      earnings: doc.data().earnings || 0
+    }));
+  } catch (e) {
+    console.error("Error fetching leaderboard:", e);
+    return [];
+  }
 }
