@@ -11,7 +11,7 @@ This app is optimized for Vercel. Follow these steps to go live:
    - Initialize a git repo: `git init`
    - Add all files: `git add .`
    - Commit: `git commit -m "Initial commit"`
-   - Create a repo on GitHub and push.
+   - Create a repo on GitHub (e.g., at `https://github.com/STE-Ve232/Tapboost.git`) and push.
 
 2. **Connect to Vercel:**
    - Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
