@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
 import { checkUserBalance, recordTransaction } from '@/lib/db-utils';
@@ -77,18 +78,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user balance
-    const hasSufficientBalance = await checkUserBalance(userId, amount, currency);
+    const hasSufficientBalance = await checkUserBalance(userId, amount);
     if (!hasSufficientBalance) {
       return NextResponse.json(
         { message: 'Insufficient balance for withdrawal.' },
         { status: 400 }
       );
     }
-
-    // Check withdrawal limits (daily/monthly)
-    const dailyLimit = 10000; // Example $10,000 daily limit
-    const monthlyLimit = 50000; // Example $50,000 monthly limit
-    // Implement checks against these limits here
 
     // Initiate PayPal payout
     const payoutResult = await initiatePayPalPayout({
@@ -118,7 +114,7 @@ export async function POST(request: NextRequest) {
       currency,
       recipient: email,
       transactionId: payoutResult.payoutId,
-      status: payoutResult.status || 'PENDING',
+      status: (payoutResult.status as any) || 'PENDING',
       fee: payoutResult.fee
     });
 
@@ -143,9 +139,6 @@ export async function POST(request: NextRequest) {
     console.error('Error in /api/withdraw/paypal POST handler:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
     
-    // Log detailed error for internal monitoring
-    // await logErrorToMonitoringSystem(error, { userId, endpoint: '/api/withdraw/paypal' });
-
     return NextResponse.json(
       { 
         message: 'An unexpected error occurred during PayPal withdrawal.',
