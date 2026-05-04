@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, ReactNode } from "react";
@@ -14,14 +13,11 @@ function AutoConnect() {
   const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
-    // Check for window.ethereum to ensure we are in a wallet environment like MiniPay
     if (typeof window === "undefined") return;
-
     if (hasAttempted || connectors.length === 0) return;
 
     const attemptConnect = async () => {
       try {
-        // Prefer the injected connector for MiniPay
         const connector = connectors.find((c) => c.id === 'injected') || connectors[0];
         await connect({ connector });
       } catch (err) {

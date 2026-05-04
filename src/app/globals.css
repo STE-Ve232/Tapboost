@@ -4,105 +4,52 @@
 
 @layer base {
   :root {
-    --background-start-rgb: 245, 247, 250; /* #f5f7fa */
-    --background-end-rgb: 195, 207, 226; /* #c3cfe2 */
-
-    --background: 210 20% 96%; /* #f5f7fa - Fallback for non-gradient contexts */
+    --background-start-rgb: 245, 247, 250;
+    --background-end-rgb: 195, 207, 226;
+    --background: 210 20% 96%;
     --foreground: 220 10% 20%;
-
     --card: 0 0% 100%;
     --card-foreground: 220 10% 20%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 20%;
-
-    /* Primary: Light Blue (#3498db) */
     --primary: 207 67% 53%;
     --primary-foreground: 210 40% 98%;
-
-    /* Secondary: Green (#2ecc71) */
     --secondary: 145 63% 49%;
     --secondary-foreground: 210 40% 98%;
-    
     --muted: 220 9% 90%;
     --muted-foreground: 220 9% 40%;
-
-    /* Accent: Yellow (#f1c40f) */
     --accent: 45 88% 50%;
-    --accent-foreground: 45 88% 10%; /* Darker text for yellow background */
-
-    /* Destructive: Red (#e74c3c) */
+    --accent-foreground: 45 88% 10%;
     --destructive: 8 80% 57%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 207 67% 53%; /* Primary color for rings */
-    
-    --radius: 0.75rem; /* Default changed from 0.5rem to align better with request's 1rem cards */
-
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --ring: 207 67% 53%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background-start-rgb: 34, 40, 49; /* Darker gradient example */
+    --background-start-rgb: 34, 40, 49;
     --background-end-rgb: 57, 62, 70;
-
     --background: 220 10% 15%;
     --foreground: 220 10% 90%;
-
     --card: 220 10% 20%;
     --card-foreground: 220 10% 90%;
-
     --popover: 220 10% 20%;
     --popover-foreground: 220 10% 90%;
-
     --primary: 207 67% 53%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 145 63% 49%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 220 10% 25%;
     --muted-foreground: 220 10% 60%;
-
     --accent: 45 88% 50%;
     --accent-foreground: 45 88% 10%;
-
     --destructive: 8 80% 57%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 220 10% 30%;
     --input: 220 10% 30%;
     --ring: 207 67% 53%;
-    
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -112,11 +59,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Apply the gradient to the body */
     background-image: linear-gradient(135deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
   }
-  /* Custom button style for bonus */
- .btn-custom {
-    @apply bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(var(--accent))]/90;
- }
 }
