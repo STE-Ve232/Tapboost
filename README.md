@@ -8,15 +8,20 @@ A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Ce
 This app is optimized for Vercel. Follow these steps to go live:
 
 1. **Push to GitHub:**
+   If you encounter a "rejected" error when pushing, it's because GitHub has files (like a README) that you don't have locally.
+   
    ```bash
    git init
    git add .
    git commit -m "Initial commit"
    git branch -M main
    git remote add origin https://github.com/STE-Ve232/Tapboost.git
-   # If remote already exists but is wrong:
+   
+   # If remote already exists but is wrong, run this first:
    # git remote set-url origin https://github.com/STE-Ve232/Tapboost.git
-   git push -u origin main
+   
+   # Use -f to overwrite the remote with your local code
+   git push -u -f origin main
    ```
 
 2. **Connect to Vercel:**
