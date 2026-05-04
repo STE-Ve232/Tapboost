@@ -1,4 +1,4 @@
-
+export const dynamic = 'force-dynamic';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
 import { checkUserBalance, recordTransaction, incrementUserPoints } from '@/lib/db-utils';
@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Execute real transaction
-    // Note: decimals vary (USDC: 6, USDT: 6, cUSD: 18)
     const decimals = asset === 'cUSD' ? 18 : 6;
     const hash = await client.writeContract({
       address: tokenAddress,
