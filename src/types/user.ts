@@ -1,4 +1,3 @@
-
 export interface UserProfile {
   username: string;
   loyaltyPoints: number;

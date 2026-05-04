@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 
 export async function authenticateUser(request: NextRequest) {
+  // Mock authentication for the prototype
   return {
     authenticated: true,
-    userId: 'user_123456789',
+    userId: 'user_dev_123',
   };
 }
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAccount } from 'wagmi';
 
@@ -57,7 +55,6 @@ export default function TapToEarn() {
     loadLeaderboard();
   }, []);
 
-  // Update crypto wallet address if MiniPay is connected
   useEffect(() => {
     if (isConnected && address) {
       setCryptoWalletAddress(address);
@@ -77,15 +74,15 @@ export default function TapToEarn() {
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
-    setEarnings(prev => prev + 0.005);
-    showAppNotification('Referral bonus +$0.005 earned!');
+    setEarnings(prev => prev + 0.05);
+    showAppNotification('Referral bonus +$0.05 earned!');
   };
 
   const claimDailyBonus = () => {
     if (!dailyBonusClaimed) {
-      setEarnings(prev => prev + 0.02);
+      setEarnings(prev => prev + 0.20);
       setDailyBonusClaimed(true);
-      showAppNotification('Daily bonus +$0.02 claimed!');
+      showAppNotification('Daily bonus +$0.20 claimed!');
       setTimeout(() => setDailyBonusClaimed(false), 24 * 60 * 60 * 1000);
     }
   };
@@ -131,7 +128,7 @@ export default function TapToEarn() {
     }
   };
 
-  const isWithdrawButtonDisabled = isLoading || earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && (!cryptoWalletAddress || !cryptoAsset));
+  const isWithdrawButtonDisabled = isLoading || earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && !cryptoWalletAddress);
 
   return (
     <div className="flex flex-col items-center w-full space-y-6">
@@ -179,10 +176,10 @@ export default function TapToEarn() {
             
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={handleReferral} className="h-12 text-xs sm:text-sm">
-                <Users className="mr-2 h-4 w-4 text-secondary" /> Refer ($0.005)
+                <Users className="mr-2 h-4 w-4 text-secondary" /> Refer ($0.05)
               </Button>
               <Button variant="outline" onClick={claimDailyBonus} disabled={dailyBonusClaimed} className="h-12 text-xs sm:text-sm">
-                <Gift className="mr-2 h-4 w-4 text-accent" /> {dailyBonusClaimed ? 'Claimed' : 'Bonus ($0.02)'}
+                <Gift className="mr-2 h-4 w-4 text-accent" /> {dailyBonusClaimed ? 'Claimed' : 'Bonus ($0.20)'}
               </Button>
             </div>
           </div>

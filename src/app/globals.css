@@ -4,8 +4,6 @@
 
 @layer base {
   :root {
-    --background-start-rgb: 245, 247, 250;
-    --background-end-rgb: 195, 207, 226;
     --background: 210 20% 96%;
     --foreground: 220 10% 20%;
     --card: 0 0% 100%;
@@ -26,11 +24,17 @@
     --input: 220 13% 88%;
     --ring: 207 67% 53%;
     --radius: 0.75rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background-start-rgb: 34, 40, 49;
-    --background-end-rgb: 57, 62, 70;
     --background: 220 10% 15%;
     --foreground: 220 10% 90%;
     --card: 220 10% 20%;
@@ -50,6 +54,14 @@
     --border: 220 10% 30%;
     --input: 220 10% 30%;
     --ring: 207 67% 53%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -59,6 +71,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: linear-gradient(135deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
   }
 }
