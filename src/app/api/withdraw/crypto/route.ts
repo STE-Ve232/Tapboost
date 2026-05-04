@@ -1,168 +1,84 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { validateWalletAddress } from '@/lib/blockchain-utils';
-import { checkUserBalance, recordTransaction } from '@/lib/db-utils';
-import { createWithdrawal } from '@/lib/exchange-service';
-import { authenticateUser } from '@/lib/auth-utils';
-import { rateLimiter } from '@/lib/rate-limiter';
 
-// Supported cryptocurrencies
-const SUPPORTED_ASSETS = ['BTC', 'ETH', 'USDT', 'USDC'];
-import { verifyTwoFactorCode } from '@/lib/auth-utils';
+import { NextResponse, type NextRequest } from 'next/server';
+import { authenticateUser } from '@/lib/auth-utils';
+import { checkUserBalance, recordTransaction, incrementUserPoints } from '@/lib/db-utils';
+import { createWalletClient, http, parseUnits, erc20Abi, Hex } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { celo } from 'viem/chains';
+
+const TOKENS = {
+  USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
+  USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+};
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1';
-  const rateLimitResult = await rateLimiter.limit(ip);
-  
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { message: 'Too many requests. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': rateLimitResult.retryAfter.toString() } }
-    );
-  }
-
-  // Authentication
   const authResult = await authenticateUser(request);
   if (!authResult.authenticated) {
-    return NextResponse.json(
-      { message: 'Authentication required' },
-      { status: 401 }
-    );
+    return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
   }
 
   const userId = authResult.userId;
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
+
+  if (!privateKey) {
+    return NextResponse.json({ message: 'Payout system not configured (Missing Treasury Key)' }, { status: 500 });
+  }
 
   try {
-    const body = await request.json();
-    const { walletAddress, amount, asset, twoFactorCode } = body;
+    const { walletAddress, amount, asset = 'USDT' } = await request.json();
 
-    // Input validation
-    if (!walletAddress || typeof walletAddress !== 'string') {
-      return NextResponse.json(
-        { message: 'Invalid crypto wallet address provided.' },
-        { status: 400 }
-      );
+    if (amount < 5.0) {
+      return NextResponse.json({ message: 'Minimum withdrawal is $5.00' }, { status: 400 });
     }
 
-    if (amount === undefined || typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json(
-        { message: 'Invalid withdrawal amount.' },
-        { status: 400 }
-      );
+    const hasBalance = await checkUserBalance(userId, amount);
+    if (!hasBalance) {
+      return NextResponse.json({ message: 'Insufficient earnings' }, { status: 400 });
     }
 
-    if (!asset || !SUPPORTED_ASSETS.includes(asset)) {
-      return NextResponse.json(
-        { message: `Unsupported cryptocurrency. Supported assets: ${SUPPORTED_ASSETS.join(', ')}` },
-        { status: 400 }
-      );
+    const tokenAddress = TOKENS[asset as keyof typeof TOKENS] as Hex;
+    if (!tokenAddress) {
+      return NextResponse.json({ message: 'Unsupported asset' }, { status: 400 });
     }
 
-    // Validate 2FA if required
-    if (process.env.REQUIRE_2FA === 'true') {
-      if (!twoFactorCode) {
-        return NextResponse.json(
-          { message: 'Two-factor authentication code is required' },
-          { status: 400 }
-        );
-      }
-      const twoFactorVerificationResult = await verifyTwoFactorCode(userId, twoFactorCode);
-      if (!twoFactorVerificationResult.success) {
-        return NextResponse.json(
-          { message: twoFactorVerificationResult.message },
-          { status: 401 }
-        );
-      }
-    }
-
-    // Wallet address validation
-    const isValidWallet = await validateWalletAddress(walletAddress, asset);
-    if (!isValidWallet) {
-      return NextResponse.json(
-        { message: 'Invalid wallet address for the specified cryptocurrency.' },
-        { status: 400 }
-      );
-    }
-
-    // Check minimum withdrawal amount (varies by asset)
-    const MIN_WITHDRAWAL = {
-      BTC: 0.0005,
-      ETH: 0.005,
-      USDT: 5,
-      USDC: 5
-    };
-
-    if (amount < MIN_WITHDRAWAL[asset]) {
-      return NextResponse.json(
-        { message: `Minimum withdrawal amount is ${MIN_WITHDRAWAL[asset]} ${asset}` },
-        { status: 400 }
-      );
-    }
-
-    // Check user balance
-    const hasSufficientBalance = await checkUserBalance(userId, amount, asset);
-    if (!hasSufficientBalance) {
-      return NextResponse.json(
-        { message: 'Insufficient balance for withdrawal.' },
-        { status: 400 }
-      );
-    }
-
-    // Check withdrawal limits
-    const dailyLimit = 10000; // Example $10,000 daily limit
-    const monthlyLimit = 50000; // Example $50,000 monthly limit
-    // Implement checks against these limits here
-
-    // Create withdrawal with exchange service
-    const withdrawalResult = await createWithdrawal({
-      userId,
-      walletAddress,
-      amount,
-      asset,
-      ipAddress: ip
+    // Initialize Blockchain Client
+    const account = privateKeyToAccount(privateKey as Hex);
+    const client = createWalletClient({
+      account,
+      chain: celo,
+      transport: http()
     });
 
-    if (!withdrawalResult.success) {
-      return NextResponse.json(
-        { message: withdrawalResult.message || 'Withdrawal failed' },
-        { status: 400 }
-      );
-    }
+    // Execute real transaction
+    // Note: decimals vary (USDC: 6, USDT: 6, cUSD: 18)
+    const decimals = asset === 'cUSD' ? 18 : 6;
+    const hash = await client.writeContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'transfer',
+      args: [walletAddress as Hex, parseUnits(amount.toString(), decimals)],
+    });
 
-    // Record transaction in database
+    // Update DB
+    await incrementUserPoints(userId, 0, -amount);
     await recordTransaction({
       userId,
       type: 'WITHDRAWAL',
       asset,
       amount,
       address: walletAddress,
-      txHash: withdrawalResult.txHash,
-      status: 'PENDING',
-      fee: withdrawalResult.fee
+      txHash: hash,
+      status: 'COMPLETED'
     });
-
-    // Send confirmation email
-    // await sendWithdrawalConfirmationEmail(userId, amount, asset);
 
     return NextResponse.json({
-      message: `Withdrawal of ${amount} ${asset} to ${walletAddress} has been initiated.`,
-      transactionId: withdrawalResult.txHash,
-      estimatedCompletion: '10-30 minutes' // Varies by blockchain
+      message: `Successfully withdrawn $${amount} to ${walletAddress}`,
+      txHash: hash
     });
 
-  } catch (error) {
-    console.error('Error in /api/withdraw/crypto POST handler:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
-    
-    // Log detailed error for internal monitoring
-    // await logErrorToMonitoringSystem(error, { userId, endpoint: '/api/withdraw/crypto' });
-
-    return NextResponse.json(
-      { 
-        message: 'An unexpected error occurred during crypto withdrawal.',
-        errorDetails: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-      },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('Blockchain error:', error);
+    return NextResponse.json({ message: error.message || 'Withdrawal failed' }, { status: 500 });
   }
 }
