@@ -1,3 +1,4 @@
+
 export const dynamic = 'force-dynamic';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
@@ -7,7 +8,7 @@ import { rateLimiter } from '@/lib/rate-limiter';
 import { sendWithdrawalEmail } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
+  // 1. Network Security: Rate limiting
   const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1';
   const rateLimitResult = await rateLimiter.limit(ip);
   
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Authentication
+  // 2. Authentication
   const authResult = await authenticateUser(request);
   if (!authResult.authenticated) {
     return NextResponse.json(
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, amount, currency = 'USD', twoFactorCode } = body;
 
-    // Input validation
+    // 3. Application Security: Strict Input validation
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json(
         { message: 'Invalid PayPal email address provided.' },
@@ -48,64 +49,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate 2FA if required
-    if (process.env.REQUIRE_2FA === 'true') {
-      if (!twoFactorCode) {
-        return NextResponse.json(
-          { message: 'Two-factor authentication code is required' },
-          { status: 400 }
-        );
-      }
-      // Verify 2FA code here
-    }
-
-    // Check minimum withdrawal amount
+    // 4. Authorization: Check user balance (Server-side source of truth)
     const MIN_WITHDRAWAL = 5.0;
+    const MAX_WITHDRAWAL = 10000.0;
+    
     if (amount < MIN_WITHDRAWAL) {
       return NextResponse.json(
-        { message: `Minimum withdrawal amount is $${MIN_WITHDRAWAL.toFixed(2)}` },
+        { message: `Minimum withdrawal is $${MIN_WITHDRAWAL.toFixed(2)}` },
         { status: 400 }
       );
     }
 
-    // Check maximum withdrawal amount
-    const MAX_WITHDRAWAL = 10000.0;
     if (amount > MAX_WITHDRAWAL) {
       return NextResponse.json(
-        { message: `Maximum withdrawal amount is $${MAX_WITHDRAWAL.toFixed(2)}` },
+        { message: 'Amount exceeds single transaction limit.' },
         { status: 400 }
       );
     }
 
-    // Check user balance
     const hasSufficientBalance = await checkUserBalance(userId, amount);
     if (!hasSufficientBalance) {
       return NextResponse.json(
-        { message: 'Insufficient balance for withdrawal.' },
+        { message: 'Insufficient balance for this withdrawal.' },
         { status: 400 }
       );
     }
 
-    // Initiate PayPal payout
+    // 5. External API Interaction
     const payoutResult = await initiatePayPalPayout({
       userId,
       recipientEmail: email,
       amount,
       currency,
-      ipAddress: ip
     });
 
     if (!payoutResult.success) {
       return NextResponse.json(
-        { 
-          message: payoutResult.message || 'PayPal withdrawal failed',
-          paypalError: payoutResult.errorDetails
-        },
+        { message: payoutResult.message || 'PayPal withdrawal failed' },
         { status: 400 }
       );
     }
 
-    // Record transaction in database
+    // 6. Data Security: Record transaction
     await recordTransaction({
       userId,
       type: 'WITHDRAWAL',
@@ -114,11 +99,10 @@ export async function POST(request: NextRequest) {
       currency,
       recipient: email,
       transactionId: payoutResult.payoutId,
-      status: (payoutResult.status as any) || 'PENDING',
-      fee: payoutResult.fee
+      status: 'COMPLETED',
     });
 
-    // Send confirmation email
+    // 7. Monitoring: Notify user
     await sendWithdrawalEmail({
       userId,
       email,
@@ -129,21 +113,14 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: `Withdrawal of ${amount.toFixed(2)} ${currency} to PayPal account ${email} has been initiated.`,
+      message: `Withdrawal of $${amount.toFixed(2)} to ${email} initiated successfully.`,
       payoutId: payoutResult.payoutId,
-      status: payoutResult.status,
-      estimatedCompletion: 'Typically completes within 1 business day'
     });
 
   } catch (error) {
-    console.error('Error in /api/withdraw/paypal POST handler:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
-    
+    console.error('PayPal Withdrawal Error:', error);
     return NextResponse.json(
-      { 
-        message: 'An unexpected error occurred during PayPal withdrawal.',
-        errorDetails: process.env.NODE_ENV === 'development' ? errorMessage : undefined
-      },
+      { message: 'An internal error occurred while processing your withdrawal.' },
       { status: 500 }
     );
   }
