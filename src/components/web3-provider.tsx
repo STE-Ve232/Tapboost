@@ -13,20 +13,26 @@ function AutoConnect() {
   const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    // We only want to attempt connection once
     if (hasAttempted || connectors.length === 0) return;
 
     const attemptConnect = async () => {
       try {
+        // MiniPay injects an 'injected' connector. 
+        // We prioritize it, otherwise use the first available.
         const connector = connectors.find((c) => c.id === 'injected') || connectors[0];
         await connect({ connector });
+        console.log("Successfully auto-connected to wallet");
       } catch (err) {
-        console.error("MiniPay auto-connect failed:", err);
+        console.error("Auto-connect failed:", err);
+      } finally {
+        setHasAttempted(true);
       }
-      setHasAttempted(true);
     };
 
-    attemptConnect();
+    // Small delay to ensure provider injection in some environments
+    const timer = setTimeout(attemptConnect, 500);
+    return () => clearTimeout(timer);
   }, [connectors, connect, hasAttempted]);
 
   return null;

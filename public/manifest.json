@@ -1,18 +1,24 @@
-
 {
   "name": "TapBoost - Tap to Earn",
   "short_name": "TapBoost",
-  "description": "Earn rewards by tapping and referring friends!",
+  "description": "Earn real Celo rewards by tapping!",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f7fa",
+  "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "orientation": "portrait"
 }
