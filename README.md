@@ -14,6 +14,8 @@ This app is optimized for Vercel. Follow these steps to go live:
    git commit -m "Initial commit"
    git branch -M main
    git remote add origin https://github.com/STE-Ve232/Tapboost.git
+   # If remote already exists but is wrong:
+   # git remote set-url origin https://github.com/STE-Ve232/Tapboost.git
    git push -u origin main
    ```
 
