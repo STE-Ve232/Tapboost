@@ -3,15 +3,16 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useAccount } from 'wagmi';
 
 import LeaderboardCard from '@/components/leaderboard-card';
 import NotificationAlert from '@/components/notification-alert';
-import { Coins, Users, Gift, Send, MousePointerClick } from 'lucide-react';
+import { Coins, Users, Gift, Send, MousePointerClick, Wallet } from 'lucide-react';
 
 interface LeaderboardEntry {
   name: string;
@@ -19,7 +20,6 @@ interface LeaderboardEntry {
 }
 
 const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-  // Mock API call
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve([
@@ -34,18 +34,18 @@ const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
 };
 
 export default function TapToEarn() {
+  const { address, isConnected } = useAccount();
   const [taps, setTaps] = useState(0);
   const [earnings, setEarnings] = useState(0);
   const [referrals, setReferrals] = useState(0);
   const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
   const [paypalEmail, setPaypalEmail] = useState('');
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
-  const [cryptoAsset, setCryptoAsset] = useState<'BTC' | 'ETH' | 'USDT' | 'USDC'>('BTC');
-  const [withdrawalMethod, setWithdrawalMethod] = useState<'paypal' | 'crypto'>('paypal');
+  const [cryptoAsset, setCryptoAsset] = useState<'BTC' | 'ETH' | 'USDT' | 'USDC'>('USDT');
+  const [withdrawalMethod, setWithdrawalMethod] = useState<'paypal' | 'crypto'>('crypto');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Used for leaderboard and withdrawal loading states
+  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -57,20 +57,27 @@ export default function TapToEarn() {
     loadLeaderboard();
   }, []);
 
+  // Update crypto wallet address if MiniPay is connected
+  useEffect(() => {
+    if (isConnected && address) {
+      setCryptoWalletAddress(address);
+    }
+  }, [isConnected, address]);
+
   const showAppNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000); // Notification stays for 3 seconds
+    setTimeout(() => setNotification(null), 3000);
   }, []);
 
   const handleTap = () => {
     setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 1.501); 
-    showAppNotification('Tap earned +$1.501!');
+    setEarnings(prev => prev + 0.001); 
+    showAppNotification('Tap earned +$0.001!');
   };
 
   const handleReferral = () => {
     setReferrals(prev => prev + 1);
-    setEarnings(prev => prev + 1.501  );
+    setEarnings(prev => prev + 0.005);
     showAppNotification('Referral bonus +$0.005 earned!');
   };
 
@@ -79,7 +86,7 @@ export default function TapToEarn() {
       setEarnings(prev => prev + 0.02);
       setDailyBonusClaimed(true);
       showAppNotification('Daily bonus +$0.02 claimed!');
-      setTimeout(() => setDailyBonusClaimed(false), 24 * 60 * 60 * 1000); // Reset after 24h
+      setTimeout(() => setDailyBonusClaimed(false), 24 * 60 * 60 * 1000);
     }
   };
 
@@ -88,19 +95,7 @@ export default function TapToEarn() {
       showAppNotification('Minimum $5.00 earnings required to withdraw.', 'error');
       return;
     }
-    if (withdrawalMethod === 'paypal' && !paypalEmail) {
-      showAppNotification('Valid PayPal email required for withdrawal.', 'error');
-      return;
-    }
-    if (withdrawalMethod === 'crypto' && !cryptoWalletAddress) {
-      showAppNotification('Valid crypto wallet address required for withdrawal.', 'error');
-      return;
-    }
-    if (withdrawalMethod === 'crypto' && !cryptoAsset) {
- showAppNotification('Please select a cryptocurrency asset for withdrawal.', 'error');
- return;
-    }
-
+    
     setIsLoading(true);
     try {
       let endpoint = '';
@@ -110,35 +105,27 @@ export default function TapToEarn() {
       if (withdrawalMethod === 'paypal') {
         endpoint = '/api/withdraw/paypal';
         payload = { email: paypalEmail, amount: withdrawalAmount };
-      } else { // crypto
+      } else {
         endpoint = '/api/withdraw/crypto';
         payload = { walletAddress: cryptoWalletAddress, amount: withdrawalAmount, asset: cryptoAsset };
       }
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        const successMessage = withdrawalMethod === 'paypal'
- ? `Withdrawal of $${withdrawalAmount.toFixed(2)} to ${paypalEmail} successfully requested.`
- : `Withdrawal of ${withdrawalAmount.toFixed(8)} ${cryptoAsset} to ${cryptoWalletAddress} successfully requested.`;
- showAppNotification(result.message || successMessage, 'success');
+        showAppNotification(result.message || 'Withdrawal requested successfully!', 'success');
         setEarnings(0); 
-        setPaypalEmail('');
-        setCryptoWalletAddress('');
       } else {
-        showAppNotification(result.message || 'Withdrawal request failed. Please try again.', 'error');
+        showAppNotification(result.message || 'Withdrawal request failed.', 'error');
       }
     } catch (error) {
-      console.error('Withdrawal API call failed:', error);
-      showAppNotification('An error occurred while processing your withdrawal. Please try again.', 'error');
+      showAppNotification('An error occurred during withdrawal.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -148,20 +135,19 @@ export default function TapToEarn() {
 
   return (
     <div className="flex flex-col items-center w-full space-y-6">
-      <Card className="w-full max-w-[95%] sm:max-w-md md:max-w-lg lg:max-w-xl text-center rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300">
+      <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold sm:text-3xl md:text-4xl flex items-center justify-center">
-            <Coins className="w-8 h-8 mr-2 sm:w-10 sm:h-10 md:w-12 md:h-12" /> TapBoost
+          <CardTitle className="text-2xl font-bold flex items-center justify-center">
+            <Coins className="w-8 h-8 mr-2 text-primary" /> TapBoost
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 p-3 sm:p-4 md:p-6">
+        <CardContent className="space-y-4">
           <AnimatePresence>
             {notification && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -20 }}
                 className="w-full"
               >
                 <NotificationAlert message={notification.message} type={notification.type} />
@@ -169,120 +155,109 @@ export default function TapToEarn() {
             )}
           </AnimatePresence>
 
-          <Card className="bg-slate-50 dark:bg-slate-800 p-3 sm:p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Your Stats</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm sm:text-base md:text-lg">
-              <p><span className="font-medium">Taps:</span> {taps}</p>
-              <p><span className="font-medium">Referrals:</span> {referrals}</p>
-              <p className="font-semibold text-primary col-span-1 sm:col-span-3 text-xl">Earnings: ${earnings.toFixed(3)}</p>
+          <div className="bg-muted/50 p-4 rounded-xl border">
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="text-left">
+                <span className="text-muted-foreground block text-xs uppercase font-bold">Taps</span>
+                <span className="text-lg font-semibold">{taps}</span>
+              </div>
+              <div className="text-left">
+                <span className="text-muted-foreground block text-xs uppercase font-bold">Referrals</span>
+                <span className="text-lg font-semibold">{referrals}</span>
+              </div>
             </div>
-          </Card>
+            <div className="text-center pt-2 border-t">
+               <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Total Earnings</span>
+               <span className="text-3xl font-black text-primary">${earnings.toFixed(3)}</span>
+            </div>
+          </div>
 
-          <motion.div whileTap={{ scale: 0.95 }} className="w-full">
-            <Button
-              onClick={handleTap}
-              disabled={isLoading}
-              className="w-full py-3 text-base sm:text-lg"
-              aria-label="Tap to earn $1.501"
-            >
-              <MousePointerClick className="mr-2 h-5 w-5" /> Tap & Earn ($0.001)
+          <div className="grid gap-3">
+            <Button onClick={handleTap} size="lg" className="h-14 text-lg font-bold shadow-md hover:shadow-lg transition-all">
+              <MousePointerClick className="mr-2 h-6 w-6" /> TAP & EARN ($0.001)
             </Button>
-          </motion.div>
-          <motion.div whileTap={{ scale: 0.95 }} className="w-full">
-            <Button
-              variant="secondary"
-              onClick={handleReferral}
-              disabled={isLoading}
-              className="w-full py-3 text-base sm:text-lg"
-              aria-label="Refer a friend to earn $0.005"
-            >
-              <Users className="mr-2 h-5 w-5" /> Refer & Earn ($0.005)
-            </Button>
-          </motion.div>
-          <motion.div whileTap={{ scale: 0.95 }} className="w-full">
-            <Button
-              onClick={claimDailyBonus}
-              disabled={dailyBonusClaimed || isLoading}
-              className="w-full py-3 text-base sm:text-lg btn-bonus"
-              aria-label={dailyBonusClaimed ? "Daily bonus already claimed" : "Claim $0.02 daily bonus"}
-            >
-              <Gift className="mr-2 h-5 w-5" /> {dailyBonusClaimed ? 'Bonus Claimed Today' : 'Claim $0.02 Bonus'}
-            </Button>
-          </motion.div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={handleReferral} className="h-12 text-xs sm:text-sm">
+                <Users className="mr-2 h-4 w-4 text-secondary" /> Refer ($0.005)
+              </Button>
+              <Button variant="outline" onClick={claimDailyBonus} disabled={dailyBonusClaimed} className="h-12 text-xs sm:text-sm">
+                <Gift className="mr-2 h-4 w-4 text-accent" /> {dailyBonusClaimed ? 'Claimed' : 'Bonus ($0.02)'}
+              </Button>
+            </div>
+          </div>
 
-          <div className="space-y-2 pt-4 border-t mt-4">
-            <h3 className="text-lg font-semibold text-muted-foreground">Withdraw Earnings</h3>
+          <div className="space-y-3 pt-6 border-t mt-4 text-left">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Withdrawal</h3>
+              {isConnected && (
+                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center">
+                  <Wallet className="h-2 w-2 mr-1" /> MiniPay Active
+                </span>
+              )}
+            </div>
 
-            <Select onValueChange={(value: "paypal" | "crypto") => setWithdrawalMethod(value)} defaultValue="paypal" disabled={isLoading}>
-              <SelectTrigger className="w-full text-base">
-                <SelectValue placeholder="Select withdrawal method" />
+            <Select onValueChange={(value: "paypal" | "crypto") => setWithdrawalMethod(value)} defaultValue="crypto">
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Method" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="crypto">Crypto (Celo/MiniPay)</SelectItem>
                 <SelectItem value="paypal">PayPal</SelectItem>
-                <SelectItem value="crypto">Crypto Wallet</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {withdrawalMethod === 'crypto' && (
- <Select onValueChange={(value: "BTC" | "ETH" | "USDT" | "USDC") => setCryptoAsset(value)} defaultValue="BTC" disabled={isLoading}>
- <SelectTrigger className="w-full text-base">
- <SelectValue placeholder="Select cryptocurrency" />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
- <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
- <SelectItem value="USDT">Tether (USDT)</SelectItem>
- <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
- </SelectContent>
- </Select>
+              <>
+                <Select onValueChange={(value: "USDT" | "USDC" | "BTC" | "ETH") => setCryptoAsset(value)} defaultValue="USDT">
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select Asset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                    <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
+                    <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
+                    <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Wallet Address"
+                  value={cryptoWalletAddress}
+                  onChange={(e) => setCryptoWalletAddress(e.target.value)}
+                  className="h-10 text-xs font-mono"
+                  readOnly={isConnected}
+                />
+                {!isConnected && (
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    * For auto-withdrawal, open this app inside MiniPay.
+                  </p>
+                )}
+              </>
             )}
 
             {withdrawalMethod === 'paypal' && (
               <Input
                 type="email"
-                placeholder="Enter PayPal Email"
+                placeholder="PayPal Email"
                 value={paypalEmail}
                 onChange={(e) => setPaypalEmail(e.target.value)}
-                disabled={isLoading}
-                className="text-base"
-                aria-label="PayPal email for withdrawal"
+                className="h-10"
               />
             )}
 
-            {withdrawalMethod === 'crypto' && (
-              <Input
-                type="text"
-                placeholder="Enter Crypto Wallet Address"
-                value={cryptoWalletAddress}
-                onChange={(e) => setCryptoWalletAddress(e.target.value)}
-                disabled={isLoading}
-                className="text-base"
-                aria-label="Crypto wallet address for withdrawal"
-              />
-            )}
-
-            <motion.div whileTap={{ scale: 0.95 }} className="w-full">
             <Button
-              variant="destructive"
+              variant="default"
               onClick={handleWithdraw}
               disabled={isWithdrawButtonDisabled}
-              className="w-full py-3 text-base sm:text-lg"
-              aria-label={`Withdraw earnings to ${withdrawalMethod === 'paypal' ? 'PayPal' : 'Crypto Wallet'}`}
+              className="w-full h-12 font-bold"
             >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </div>
-              ) : (
-                <><Send className="mr-2 h-5 w-5" /> Withdraw</>
-              )}
+              {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Request Payout</>}
             </Button>
-            </motion.div>
-            { (earnings < 5.0 || (withdrawalMethod === 'paypal' && !paypalEmail) || (withdrawalMethod === 'crypto' && (!cryptoWalletAddress || !cryptoAsset))) && <p className="text-xs text-muted-foreground mt-1">Minimum $5.00 to withdraw. {withdrawalMethod === 'paypal' ? 'PayPal email' : 'Crypto wallet address and asset'} required.</p>}
+            {earnings < 5.0 && (
+              <p className="text-[10px] text-center text-muted-foreground italic">
+                Minimum withdrawal amount is $5.00
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
