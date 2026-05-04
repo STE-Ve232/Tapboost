@@ -9,39 +9,35 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAccount } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/context/UserContext';
+import { auth as firebaseAuth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 import LeaderboardCard from '@/components/leaderboard-card';
-import { Coins, Users, Gift, Send, MousePointerClick, Wallet } from 'lucide-react';
+import { Coins, LogOut, Send, MousePointerClick, Wallet } from 'lucide-react';
 
 export default function TapToEarn() {
   const { address, isConnected } = useAccount();
+  const { user, userData, refreshUserData } = useUser();
   const { toast } = useToast();
   
-  const [taps, setTaps] = useState(0);
-  const [earnings, setEarnings] = useState(0);
-  const [referrals, setReferrals] = useState(0);
+  const [localTaps, setLocalTaps] = useState(0);
+  const [localEarnings, setLocalEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [cryptoAsset, setCryptoAsset] = useState('USDT');
 
-  // Load User Data from Firestore
-  const loadUserData = useCallback(async () => {
-    try {
-      const response = await fetch('/api/user');
-      if (response.ok) {
-        const data = await response.json();
-        setTaps(data.points || 0);
-        setEarnings(data.earnings || 0);
-      }
-    } catch (err) {
-      console.error("Failed to load user:", err);
+  useEffect(() => {
+    if (userData) {
+      setLocalTaps(userData.points || 0);
+      setLocalEarnings(userData.earnings || 0);
     }
-  }, []);
+  }, [userData]);
 
   const loadLeaderboard = useCallback(async () => {
     try {
-      const response = await fetch('/api/leaderboard'); // You'll need to create this simple GET endpoint
+      const response = await fetch('/api/leaderboard');
       if (response.ok) {
         const data = await response.json();
         setLeaderboard(data);
@@ -50,9 +46,8 @@ export default function TapToEarn() {
   }, []);
 
   useEffect(() => {
-    loadUserData();
     loadLeaderboard();
-  }, [loadUserData, loadLeaderboard]);
+  }, [loadLeaderboard]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -61,19 +56,25 @@ export default function TapToEarn() {
   }, [isConnected, address]);
 
   const handleTap = async () => {
-    // Optimistic UI
-    setTaps(prev => prev + 1);
-    setEarnings(prev => prev + 0.001);
+    if (!user) return;
+    
+    // Optimistic UI updates
+    setLocalTaps(prev => prev + 1);
+    setLocalEarnings(prev => prev + 0.001);
 
     try {
-      await fetch('/api/tap', { method: 'POST' });
+      await fetch('/api/tap', { 
+        method: 'POST',
+        headers: { 'x-user-id': user.uid }
+      });
     } catch (err) {
       toast({ title: "Sync Error", description: "Couldn't save your tap.", variant: "destructive" });
     }
   };
 
   const handleWithdraw = async () => {
-    if (earnings < 5.0) {
+    if (!user) return;
+    if (localEarnings < 5.0) {
       toast({ title: "Withdrawal Error", description: "Minimum $5.00 required.", variant: "destructive" });
       return;
     }
@@ -82,10 +83,13 @@ export default function TapToEarn() {
     try {
       const response = await fetch('/api/withdraw/crypto', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.uid
+        },
         body: JSON.stringify({ 
           walletAddress: cryptoWalletAddress, 
-          amount: earnings, 
+          amount: localEarnings, 
           asset: cryptoAsset 
         }),
       });
@@ -94,7 +98,7 @@ export default function TapToEarn() {
 
       if (response.ok) {
         toast({ title: "Success!", description: result.message });
-        loadUserData(); // Refresh balance
+        await refreshUserData();
       } else {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
@@ -105,9 +109,21 @@ export default function TapToEarn() {
     }
   };
 
+  const handleLogout = async () => {
+    if (!firebaseAuth) return;
+    await signOut(firebaseAuth);
+    toast({ title: "Logged out", description: "Come back soon!" });
+  };
+
   return (
     <div className="flex flex-col items-center w-full space-y-6">
-      <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary">
+      <div className="w-full max-w-md flex justify-end">
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
+          <LogOut className="w-4 h-4 mr-2" /> Logout
+        </Button>
+      </div>
+
+      <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary overflow-hidden">
         <CardHeader>
           <CardTitle className="text-2xl font-bold flex items-center justify-center">
             <Coins className="w-8 h-8 mr-2 text-primary" /> TapBoost
@@ -118,22 +134,26 @@ export default function TapToEarn() {
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
               <div className="text-left">
                 <span className="text-muted-foreground block text-xs uppercase font-bold">Total Taps</span>
-                <span className="text-lg font-semibold">{taps}</span>
+                <span className="text-lg font-semibold">{localTaps}</span>
               </div>
               <div className="text-left">
-                <span className="text-muted-foreground block text-xs uppercase font-bold">Referrals</span>
-                <span className="text-lg font-semibold">{referrals}</span>
+                <span className="text-muted-foreground block text-xs uppercase font-bold">User</span>
+                <span className="text-lg font-semibold truncate block w-full">
+                  {user?.displayName || 'Tapper'}
+                </span>
               </div>
             </div>
             <div className="text-center pt-2 border-t">
                <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Your Earnings (Real USD)</span>
-               <span className="text-3xl font-black text-primary">${earnings.toFixed(3)}</span>
+               <span className="text-3xl font-black text-primary">${localEarnings.toFixed(3)}</span>
             </div>
           </div>
 
-          <Button onClick={handleTap} size="lg" className="w-full h-16 text-lg font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-all">
-            <MousePointerClick className="mr-2 h-6 w-6" /> TAP TO EARN
-          </Button>
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Button onClick={handleTap} size="lg" className="w-full h-20 text-xl font-black shadow-lg hover:scale-[1.02] transition-all bg-primary hover:bg-primary/90 rounded-2xl">
+              <MousePointerClick className="mr-2 h-8 w-8" /> TAP TO EARN
+            </Button>
+          </motion.div>
 
           <div className="space-y-3 pt-6 border-t mt-4 text-left">
             <div className="flex items-center justify-between">
@@ -165,13 +185,13 @@ export default function TapToEarn() {
 
             <Button
               onClick={handleWithdraw}
-              disabled={isLoading || earnings < 5.0 || !cryptoWalletAddress}
-              className="w-full h-12 font-bold"
+              disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
+              className="w-full h-12 font-bold rounded-xl"
             >
               {isLoading ? 'Processing Blockchain...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Earnings</>}
             </Button>
             
-            {earnings < 5.0 && (
+            {localEarnings < 5.0 && (
               <p className="text-[10px] text-center text-muted-foreground italic">
                 Keep tapping! Minimum withdrawal is $5.00
               </p>

@@ -12,14 +12,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check if we have at least an API key before initializing to avoid crashing during build
 const isConfigValid = !!firebaseConfig.apiKey;
 
 const app = getApps().length > 0 
   ? getApp() 
   : (isConfigValid ? initializeApp(firebaseConfig) : null);
 
-// Initialize services only if app is valid
 const db = app ? getFirestore(app) : null as any;
 const auth = app ? getAuth(app) : null as any;
 
