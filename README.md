@@ -8,14 +8,18 @@ A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Ce
 This app is optimized for Vercel. Follow these steps to go live:
 
 1. **Push to GitHub:**
-   - Initialize a git repo: `git init`
-   - Add all files: `git add .`
-   - Commit: `git commit -m "Initial commit"`
-   - Create a repo on GitHub (e.g., at `https://github.com/STE-Ve232/Tapboost.git`) and push.
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/STE-Ve232/Tapboost.git
+   git push -u origin main
+   ```
 
 2. **Connect to Vercel:**
    - Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
-   - Import your GitHub repository.
+   - Import your GitHub repository `Tapboost`.
 
 3. **Configure Environment Variables:**
    In the Vercel project settings, add the following variables:
