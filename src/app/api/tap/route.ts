@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Each tap adds 1 point and $0.001
+    // Each tap adds 1 point and $0.011
     await incrementUserPoints(authResult.userId, 1, 0.001);
     return NextResponse.json({ success: true });
   } catch (error) {

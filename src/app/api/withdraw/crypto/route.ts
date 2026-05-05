@@ -16,7 +16,7 @@ const TOKENS = {
 };
 
 export async function POST(request: NextRequest) {
-  const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1';
+  const ip = request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1';
   const rateLimit = await rateLimiter.limit(ip);
   if (!rateLimit.success) return NextResponse.json({ message: 'Too many requests' }, { status: 429 });
 

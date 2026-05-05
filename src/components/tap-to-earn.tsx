@@ -144,7 +144,7 @@ export default function TapToEarn() {
               </div>
             </div>
             <div className="text-center pt-2 border-t">
-               <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Your Earnings (Real USD)</span>
+               <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Your Earnings</span>
                <span className="text-3xl font-black text-primary">${localEarnings.toFixed(3)}</span>
             </div>
           </div>

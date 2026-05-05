@@ -75,7 +75,6 @@ export default function AuthForm() {
       setIsLoading(false);
     }
   };
-
   const formatKeyName = (key: string) => {
     // Converts camelCase (apiKey) to SNAKE_CASE (API_KEY)
     const snakeCase = key.replace(/([A-Z])/g, "_$1").toUpperCase();
@@ -100,7 +99,7 @@ export default function AuthForm() {
               </ul>
               <div className="mt-3 flex items-center text-xs font-semibold">
                 <Icons.Settings />
-                <span>Set these in Vercel Settings > Environment Variables.</span>
+                <span>Set these in Vercel Settings  Environment Variables.</span>
               </div>
             </div>
           </div>
