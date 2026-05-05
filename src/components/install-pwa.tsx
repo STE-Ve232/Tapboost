@@ -21,10 +21,20 @@ export default function InstallPWA() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Don't show if already in standalone mode
-    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+    // Check if already in standalone mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    
+    if (isStandalone) {
+      setShowPrompt(false);
       return;
     }
+
+    // iOS detection
+    const isIPad = navigator.userAgent.includes('iPad');
+    const isIPhone = navigator.userAgent.includes('iPhone');
+    const isIPod = navigator.userAgent.includes('iPod');
+    const ios = (isIPad || isIPhone || isIPod) && !(window as any).MSStream;
+    setIsIOS(ios);
 
     const handler = (e: any) => {
       e.preventDefault();
@@ -34,13 +44,9 @@ export default function InstallPWA() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Detect iOS
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    setIsIOS(ios);
-    
-    // On iOS, we can't detect 'beforeinstallprompt', so we show it if not standalone after a delay
-    if (ios) {
-      const timer = setTimeout(() => setShowPrompt(true), 3000);
+    // On iOS, we show the manual instruction prompt after a short delay
+    if (ios && !isStandalone) {
+      const timer = setTimeout(() => setShowPrompt(true), 2000);
       return () => clearTimeout(timer);
     }
 
@@ -66,20 +72,26 @@ export default function InstallPWA() {
           <div className="bg-white/20 p-2.5 rounded-xl">
             {isIOS ? <Icons.Share /> : <Icons.Download />}
           </div>
-          <div>
+          <div className="flex flex-col">
             <p className="font-bold text-sm leading-tight">Install TapBoost</p>
-            <p className="text-[10px] opacity-90 leading-tight mt-0.5">
-              {isIOS ? "Tap Share then 'Add to Home Screen'" : "Fast, safe, and ready to earn anytime."}
+            <p className="text-[10px] opacity-90 leading-tight mt-1">
+              {isIOS 
+                ? "Tap 'Share' and then 'Add to Home Screen'" 
+                : "Add to home screen for the full app experience."}
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           {!isIOS && deferredPrompt && (
-            <Button size="sm" variant="secondary" onClick={handleInstall} className="font-bold text-xs h-8 px-4 rounded-lg">
+            <Button size="sm" variant="secondary" onClick={handleInstall} className="font-bold text-xs h-8 px-4 rounded-lg shadow-sm">
               Install
             </Button>
           )}
-          <button onClick={() => setShowPrompt(false)} className="p-1.5 hover:bg-white/10 rounded-full transition-colors">
+          <button 
+            onClick={() => setShowPrompt(false)} 
+            className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+            aria-label="Close"
+          >
             <Icons.X />
           </button>
         </div>

@@ -63,8 +63,16 @@ export default function AuthForm() {
   };
 
   const formatKeyName = (key: string) => {
-    const snakeCase = key.replace(/([A-Z])/g, "_$1").toUpperCase();
-    return `NEXT_PUBLIC_FIREBASE_${snakeCase}`;
+    // Correct mapping for Firebase environment variables
+    const map: Record<string, string> = {
+      apiKey: 'API_KEY',
+      authDomain: 'AUTH_DOMAIN',
+      projectId: 'PROJECT_ID',
+      storageBucket: 'STORAGE_BUCKET',
+      messagingSenderId: 'MESSAGING_SENDER_ID',
+      appId: 'APP_ID'
+    };
+    return `NEXT_PUBLIC_FIREBASE_${map[key] || key.toUpperCase()}`;
   };
 
   return (
@@ -77,7 +85,7 @@ export default function AuthForm() {
             </div>
             <div>
               <p className="font-bold text-sm">Critical: Missing Configuration</p>
-              <p className="text-xs mb-2">The following environment variables are not set:</p>
+              <p className="text-xs mb-2">The following environment variables are not set or contain placeholder text:</p>
               <ul className="list-disc list-inside text-[10px] font-mono bg-white/50 p-2 rounded">
                 {missingKeys.map(key => (
                   <li key={key}>{formatKeyName(key)}</li>
