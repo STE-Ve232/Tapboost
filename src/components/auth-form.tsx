@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
-// Inline SVGs to avoid lucide-react module factory errors during HMR
 const Icons = {
   Coins: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
@@ -42,15 +41,7 @@ export default function AuthForm() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isConfigValid || !auth) {
-      toast({ 
-        title: "Configuration Error", 
-        description: "Firebase credentials are missing or invalid.", 
-        variant: "destructive" 
-      });
-      return;
-    }
+    if (!isConfigValid || !auth) return;
 
     setIsLoading(true);
     try {
@@ -65,35 +56,28 @@ export default function AuthForm() {
         toast({ title: "Account created!", description: "Start tapping to earn." });
       }
     } catch (error: any) {
-      toast({ 
-        title: "Authentication Failed", 
-        description: error.message || "An error occurred during authentication.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Auth Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const formatKeyName = (key: string) => {
-    // Converts camelCase (apiKey) to SNAKE_CASE (API_KEY)
     const snakeCase = key.replace(/([A-Z])/g, "_$1").toUpperCase();
-    // Remove leading underscore if present (e.g., _A_P_I_K_E_Y -> API_KEY)
-    const cleanSnake = snakeCase.startsWith('_') ? snakeCase.substring(1) : snakeCase;
-    return `NEXT_PUBLIC_FIREBASE_${cleanSnake}`;
+    return `NEXT_PUBLIC_FIREBASE_${snakeCase}`;
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full px-4 py-8">
       {!isConfigValid && (
-        <div className="w-full max-w-md mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg shadow-md">
+        <div className="w-full max-w-md mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg shadow-md animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-start space-x-3">
             <div className="mt-0.5 shrink-0 text-red-500">
               <Icons.AlertCircle />
             </div>
             <div>
               <p className="font-bold text-sm">Critical: Missing Configuration</p>
-              <p className="text-xs mb-2">The following environment variables are not set or contain placeholder text:</p>
+              <p className="text-xs mb-2">The following environment variables are not set:</p>
               <ul className="list-disc list-inside text-[10px] font-mono bg-white/50 p-2 rounded">
                 {missingKeys.map(key => (
                   <li key={key}>{formatKeyName(key)}</li>
@@ -101,7 +85,7 @@ export default function AuthForm() {
               </ul>
               <div className="mt-3 flex items-center text-xs font-semibold">
                 <Icons.Settings />
-                <span>Set these in Vercel Settings → Environment Variables.</span>
+                <span>Set these in Vercel settings and redeploy.</span>
               </div>
             </div>
           </div>
@@ -177,10 +161,6 @@ export default function AuthForm() {
           </div>
         </CardContent>
       </Card>
-      
-      <p className="mt-8 text-center text-xs text-muted-foreground max-w-xs leading-relaxed">
-        Your privacy is protected. We use Firebase Authentication to ensure your earnings are secure.
-      </p>
     </div>
   );
 }

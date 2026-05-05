@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import LayoutClientContent from '@/components/layout-client-content';
+import InstallPWA from '@/components/install-pwa';
 import Script from 'next/script';
 
 const geistSans = Geist({
@@ -63,6 +64,7 @@ export default function RootLayout({
       >
         <LayoutClientContent>
           {children}
+          <InstallPWA />
         </LayoutClientContent>
       </body>
     </html>
