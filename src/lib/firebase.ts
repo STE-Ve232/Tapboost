@@ -11,9 +11,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check if all required config values are present
+// Check for missing or placeholder values
 const missingKeys = Object.entries(firebaseConfig)
-  .filter(([_, value]) => !value)
+  .filter(([_, value]) => !value || value === 'your_api_key' || value.includes('your-project'))
   .map(([key]) => key);
 
 const isConfigValid = missingKeys.length === 0;
@@ -32,8 +32,8 @@ if (typeof window !== 'undefined') {
       console.error("Error initializing Firebase:", error);
     }
   } else {
-    console.warn("Firebase configuration is incomplete. Missing keys:", missingKeys.join(", "));
+    console.error("Firebase configuration is incomplete or uses placeholders. Missing/Invalid keys:", missingKeys);
   }
 }
 
-export { app, db, auth, isConfigValid };
+export { app, db, auth, isConfigValid, missingKeys };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { auth, isConfigValid } from '@/lib/firebase';
+import { auth, isConfigValid, missingKeys } from '@/lib/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Coins, LogIn, UserPlus, AlertTriangle } from 'lucide-react';
+import { Coins, LogIn, UserPlus, AlertTriangle, Settings } from 'lucide-react';
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,30 +28,12 @@ export default function AuthForm() {
     if (!isConfigValid || !auth) {
       toast({ 
         title: "Configuration Error", 
-        description: "Firebase is not properly configured. Please check your environment variables in Vercel or .env.local.", 
+        description: "Firebase credentials are missing or invalid. Check the dashboard warning.", 
         variant: "destructive" 
       });
       return;
     }
 
-    if (!email || !password) {
-      toast({ 
-        title: "Validation Error", 
-        description: "Please fill in all required fields.", 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    if (!isLogin && !username) {
-      toast({ 
-        title: "Validation Error", 
-        description: "Username is required for sign up.", 
-        variant: "destructive" 
-      });
-      return;
-    }
-    
     setIsLoading(true);
     try {
       if (isLogin) {
@@ -78,11 +60,22 @@ export default function AuthForm() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full px-4">
       {!isConfigValid && (
-        <div className="w-full max-w-md mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-r-lg flex items-start space-x-3 shadow-md animate-in fade-in slide-in-from-top-4">
-          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-bold text-sm">Action Required</p>
-            <p className="text-xs">Firebase environment variables are missing. Please add them to your Vercel project settings to enable Login/Signup.</p>
+        <div className="w-full max-w-md mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg shadow-md animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Critical: Missing Configuration</p>
+              <p className="text-xs mb-2">The following environment variables are not set or contain placeholder text:</p>
+              <ul className="list-disc list-inside text-[10px] font-mono bg-white/50 p-2 rounded">
+                {missingKeys.map(key => (
+                  <li key={key}>NEXT_PUBLIC_FIREBASE_{key.toUpperCase().replace(/([A-Z])/g, '_$1')}</li>
+                ))}
+              </ul>
+              <div className="mt-3 flex items-center text-xs font-semibold">
+                <Settings className="h-3 w-3 mr-1" />
+                <span>Go to Vercel Project Settings > Environment Variables to add them.</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
