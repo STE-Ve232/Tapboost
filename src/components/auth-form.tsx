@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth, isConfigValid } from '@/lib/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -13,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Coins, LogIn, UserPlus } from 'lucide-react';
+import { Coins, LogIn, UserPlus, AlertTriangle } from 'lucide-react';
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,7 +24,33 @@ export default function AuthForm() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    
+    if (!isConfigValid || !auth) {
+      toast({ 
+        title: "Configuration Error", 
+        description: "Firebase is not properly configured. Please check your environment variables in Vercel or .env.local.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (!email || !password) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Please fill in all required fields.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (!isLogin && !username) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Username is required for sign up.", 
+        variant: "destructive" 
+      });
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -42,7 +67,7 @@ export default function AuthForm() {
     } catch (error: any) {
       toast({ 
         title: "Authentication Failed", 
-        description: error.message, 
+        description: error.message || "An error occurred during authentication.", 
         variant: "destructive" 
       });
     } finally {
@@ -52,6 +77,16 @@ export default function AuthForm() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full px-4">
+      {!isConfigValid && (
+        <div className="w-full max-w-md mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-r-lg flex items-start space-x-3 shadow-md animate-in fade-in slide-in-from-top-4">
+          <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold text-sm">Action Required</p>
+            <p className="text-xs">Firebase environment variables are missing. Please add them to your Vercel project settings to enable Login/Signup.</p>
+          </div>
+        </div>
+      )}
+
       <Card className="w-full max-w-md shadow-2xl border-t-4 border-t-primary rounded-2xl">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-2">
@@ -77,6 +112,7 @@ export default function AuthForm() {
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
                   required={!isLogin}
+                  disabled={isLoading || !isConfigValid}
                 />
               </div>
             )}
@@ -89,6 +125,7 @@ export default function AuthForm() {
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
                 required 
+                disabled={isLoading || !isConfigValid}
               />
             </div>
             <div className="space-y-2">
@@ -100,9 +137,10 @@ export default function AuthForm() {
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
+                disabled={isLoading || !isConfigValid}
               />
             </div>
-            <Button type="submit" className="w-full h-12 font-bold text-lg" disabled={isLoading}>
+            <Button type="submit" className="w-full h-12 font-bold text-lg" disabled={isLoading || !isConfigValid}>
               {isLoading ? 'Processing...' : (isLogin ? <><LogIn className="mr-2 h-5 w-5" /> Login</> : <><UserPlus className="mr-2 h-5 w-5" /> Sign Up</>)}
             </Button>
           </form>
@@ -111,6 +149,7 @@ export default function AuthForm() {
             <button 
               onClick={() => setIsLogin(!isLogin)} 
               className="text-primary hover:underline font-medium"
+              disabled={isLoading || !isConfigValid}
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
             </button>

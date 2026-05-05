@@ -1,7 +1,6 @@
-
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,13 +11,29 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const isConfigValid = !!firebaseConfig.apiKey;
+// Check if all required config values are present
+const missingKeys = Object.entries(firebaseConfig)
+  .filter(([_, value]) => !value)
+  .map(([key]) => key);
 
-const app = getApps().length > 0 
-  ? getApp() 
-  : (isConfigValid ? initializeApp(firebaseConfig) : null);
+const isConfigValid = missingKeys.length === 0;
 
-const db = app ? getFirestore(app) : null as any;
-const auth = app ? getAuth(app) : null as any;
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
+let auth: Auth | null = null;
 
-export { app, db, auth };
+if (typeof window !== 'undefined') {
+  if (isConfigValid) {
+    try {
+      app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+    } catch (error) {
+      console.error("Error initializing Firebase:", error);
+    }
+  } else {
+    console.warn("Firebase configuration is incomplete. Missing keys:", missingKeys.join(", "));
+  }
+}
+
+export { app, db, auth, isConfigValid };
