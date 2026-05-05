@@ -1,24 +1,26 @@
+
 {
   "name": "TapBoost - Tap to Earn",
   "short_name": "TapBoost",
-  "description": "Earn real Celo rewards by tapping!",
+  "description": "Earn real rewards by tapping and referring friends on MiniPay.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "https://picsum.photos/seed/tapboost/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "https://picsum.photos/seed/tapboost/512/512",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "orientation": "portrait"
+  ]
 }
