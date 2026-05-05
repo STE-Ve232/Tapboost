@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
@@ -35,12 +36,22 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    // Safety timeout: stop loading if Firebase takes too long to initialize
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn("User auth timeout reached, forcing loading false.");
+        setLoading(false);
+      }
+    }, 5000);
+
     if (!auth) {
       setLoading(false);
+      clearTimeout(timeout);
       return;
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      clearTimeout(timeout);
       setUser(currentUser);
       if (currentUser) {
         await fetchProfile(currentUser.uid);
@@ -50,7 +61,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const refreshUserData = async () => {
