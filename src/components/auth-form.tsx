@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -75,10 +74,13 @@ export default function AuthForm() {
       setIsLoading(false);
     }
   };
+
   const formatKeyName = (key: string) => {
     // Converts camelCase (apiKey) to SNAKE_CASE (API_KEY)
     const snakeCase = key.replace(/([A-Z])/g, "_$1").toUpperCase();
-    return `NEXT_PUBLIC_FIREBASE_${snakeCase}`;
+    // Remove leading underscore if present (e.g., _A_P_I_K_E_Y -> API_KEY)
+    const cleanSnake = snakeCase.startsWith('_') ? snakeCase.substring(1) : snakeCase;
+    return `NEXT_PUBLIC_FIREBASE_${cleanSnake}`;
   };
 
   return (
@@ -99,7 +101,7 @@ export default function AuthForm() {
               </ul>
               <div className="mt-3 flex items-center text-xs font-semibold">
                 <Icons.Settings />
-                <span>Set these in Vercel Settings  Environment Variables.</span>
+                <span>Set these in Vercel Settings → Environment Variables.</span>
               </div>
             </div>
           </div>

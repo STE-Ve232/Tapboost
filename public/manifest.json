@@ -1,8 +1,7 @@
-
 {
   "name": "TapBoost - Tap to Earn",
   "short_name": "TapBoost",
-  "description": "Earn real rewards by tapping and referring friends on MiniPay.",
+  "description": "Earn rewards by tapping and referring friends!",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -11,16 +10,16 @@
   "scope": "/",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/tapboost/192/192",
+      "src": "/icon.svg",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
-      "src": "https://picsum.photos/seed/tapboost/512/512",
+      "src": "/icon.svg",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
