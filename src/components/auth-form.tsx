@@ -76,6 +76,12 @@ export default function AuthForm() {
     }
   };
 
+  const formatKeyName = (key: string) => {
+    // Converts camelCase (apiKey) to SNAKE_CASE (API_KEY)
+    const snakeCase = key.replace(/([A-Z])/g, "_$1").toUpperCase();
+    return `NEXT_PUBLIC_FIREBASE_${snakeCase}`;
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] w-full px-4 py-8">
       {!isConfigValid && (
@@ -89,7 +95,7 @@ export default function AuthForm() {
               <p className="text-xs mb-2">The following environment variables are not set or contain placeholder text:</p>
               <ul className="list-disc list-inside text-[10px] font-mono bg-white/50 p-2 rounded">
                 {missingKeys.map(key => (
-                  <li key={key}>NEXT_PUBLIC_FIREBASE_{key.toUpperCase().replace(/([A-Z])/g, '_$1')}</li>
+                  <li key={key}>{formatKeyName(key)}</li>
                 ))}
               </ul>
               <div className="mt-3 flex items-center text-xs font-semibold">
