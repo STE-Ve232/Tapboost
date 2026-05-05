@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Coins, LogIn, UserPlus, AlertTriangle, Settings } from 'lucide-react';
+import { Coins, LogIn, UserPlus, TriangleAlert, Settings } from 'lucide-react';
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -62,7 +62,7 @@ export default function AuthForm() {
       {!isConfigValid && (
         <div className="w-full max-w-md mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg shadow-md animate-in fade-in slide-in-from-top-4">
           <div className="flex items-start space-x-3">
-            <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
+            <TriangleAlert className="h-5 w-5 mt-0.5 shrink-0" />
             <div>
               <p className="font-bold text-sm">Critical: Missing Configuration</p>
               <p className="text-xs mb-2">The following environment variables are not set or contain placeholder text:</p>
