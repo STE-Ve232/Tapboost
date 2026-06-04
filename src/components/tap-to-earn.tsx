@@ -17,12 +17,12 @@ import LeaderboardCard from '@/components/leaderboard-card';
 import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard } from 'lucide-react';
 
 const UPGRADES = [
-  { level: 1, power: 0.001, cost: 0 },
-  { level: 2, power: 0.005, cost: 2.0 },
-  { level: 3, power: 0.010, cost: 5.0 },
-  { level: 4, power: 0.025, cost: 15.0 },
-  { level: 5, power: 0.050, cost: 35.0 },
-  { level: 6, power: 0.100, cost: 75.0 },
+  { level: 1, power: 0.300, cost: 0 },
+  { level: 2, power: 0.500, cost: 2.0 },
+  { level: 3, power: 0.600, cost: 5.0 },
+  { level: 4, power: 0.700, cost: 15.0 },
+  { level: 5, power: 0.900, cost: 35.0 },
+  { level: 6, power: 1.100, cost: 75.0 },
 ];
 
 export default function TapToEarn() {
@@ -42,7 +42,7 @@ export default function TapToEarn() {
     if (userData) {
       setLocalTaps(userData.points || 0);
       setLocalEarnings(userData.earnings || 0);
-      setLocalTapPower(userData.tapPower || 0.001);
+      setLocalTapPower(userData.tapPower || 0.300);
     }
   }, [userData]);
 

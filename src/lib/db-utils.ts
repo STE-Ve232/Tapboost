@@ -18,7 +18,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       createdAt: new Date().toISOString(),
       membershipTier: 'Bronze',
       tapLevel: 1,
-      tapPower: 0.001,
+      tapPower: 0.300,
     };
     await setDoc(userRef, newUser);
     return newUser;
@@ -28,7 +28,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   return {
     ...data,
     tapLevel: data.tapLevel || 1,
-    tapPower: data.tapPower || 0.001,
+    tapPower: data.tapPower || 0.300,
     earnings: data.earnings || 0,
     points: data.points || 0
   } as UserProfile;

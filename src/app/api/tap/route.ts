@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const profile = await getUserProfile(authResult.userId);
-    const tapPower = profile?.tapPower || 0.001;
+    const tapPower = profile?.tapPower || 0.300;
     
     // Each tap adds 1 point and use user's current tapPower
     await incrementUserPoints(authResult.userId, 1, tapPower);
