@@ -1,9 +1,8 @@
-
 export const dynamic = 'force-dynamic';
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
-import { incrementUserPoints } from '@/lib/db-utils';
+import { incrementUserPoints, getUserProfile } from '@/lib/db-utils';
 
 export async function POST(request: NextRequest) {
   const authResult = await authenticateUser(request);
@@ -12,8 +11,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Each tap adds 1 point and $0.011
-    await incrementUserPoints(authResult.userId, 1, 0.001);
+    const profile = await getUserProfile(authResult.userId);
+    const tapPower = profile?.tapPower || 0.001;
+    
+    // Each tap adds 1 point and use user's current tapPower
+    await incrementUserPoints(authResult.userId, 1, tapPower);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Tap API error:', error);

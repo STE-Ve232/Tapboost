@@ -1,4 +1,3 @@
-
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { UserProfile, Transaction } from '@/types/user';
@@ -18,12 +17,21 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       avatarUrl: `https://picsum.photos/seed/${userId}/150/150`,
       createdAt: new Date().toISOString(),
       membershipTier: 'Bronze',
+      tapLevel: 1,
+      tapPower: 0.001,
     };
     await setDoc(userRef, newUser);
     return newUser;
   }
 
-  return userSnap.data() as UserProfile;
+  const data = userSnap.data();
+  return {
+    ...data,
+    tapLevel: data.tapLevel || 1,
+    tapPower: data.tapPower || 0.001,
+    earnings: data.earnings || 0,
+    points: data.points || 0
+  } as UserProfile;
 }
 
 export async function incrementUserPoints(userId: string, points: number, earnings: number) {
@@ -32,6 +40,16 @@ export async function incrementUserPoints(userId: string, points: number, earnin
   await updateDoc(userRef, {
     points: increment(points),
     earnings: increment(earnings)
+  });
+}
+
+export async function upgradeUserTapPower(userId: string, cost: number, newLevel: number, newPower: number) {
+  if (!db) return;
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    earnings: increment(-cost),
+    tapLevel: newLevel,
+    tapPower: newPower
   });
 }
 

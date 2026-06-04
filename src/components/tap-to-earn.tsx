@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,9 +11,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/context/UserContext';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import LeaderboardCard from '@/components/leaderboard-card';
-import { Coins, LogOut, Send, MousePointerClick, Wallet } from 'lucide-react';
+import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard } from 'lucide-react';
+
+const UPGRADES = [
+  { level: 1, power: 0.001, cost: 0 },
+  { level: 2, power: 0.005, cost: 2.0 },
+  { level: 3, power: 0.010, cost: 5.0 },
+  { level: 4, power: 0.025, cost: 15.0 },
+  { level: 5, power: 0.050, cost: 35.0 },
+  { level: 6, power: 0.100, cost: 75.0 },
+];
 
 export default function TapToEarn() {
   const { address, isConnected } = useAccount();
@@ -23,6 +32,7 @@ export default function TapToEarn() {
   
   const [localTaps, setLocalTaps] = useState(0);
   const [localEarnings, setLocalEarnings] = useState(0);
+  const [localTapPower, setLocalTapPower] = useState(0.001);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
@@ -32,6 +42,7 @@ export default function TapToEarn() {
     if (userData) {
       setLocalTaps(userData.points || 0);
       setLocalEarnings(userData.earnings || 0);
+      setLocalTapPower(userData.tapPower || 0.001);
     }
   }, [userData]);
 
@@ -58,9 +69,9 @@ export default function TapToEarn() {
   const handleTap = async () => {
     if (!user) return;
     
-    // Optimistic UI updates
+    // Optimistic UI updates based on current persistent tapPower
     setLocalTaps(prev => prev + 1);
-    setLocalEarnings(prev => prev + 0.001);
+    setLocalEarnings(prev => prev + localTapPower);
 
     try {
       await fetch('/api/tap', { 
@@ -69,6 +80,28 @@ export default function TapToEarn() {
       });
     } catch (err) {
       toast({ title: "Sync Error", description: "Couldn't save your tap.", variant: "destructive" });
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/upgrade', {
+        method: 'POST',
+        headers: { 'x-user-id': user.uid }
+      });
+      const result = await response.json();
+      if (response.ok) {
+        toast({ title: "Success!", description: result.message });
+        await refreshUserData();
+      } else {
+        toast({ title: "Upgrade Failed", description: result.message, variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Network Error", description: "Failed to process upgrade.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,16 +148,25 @@ export default function TapToEarn() {
     toast({ title: "Logged out", description: "Come back soon!" });
   };
 
+  const currentLevel = userData?.tapLevel || 1;
+  const nextUpgrade = UPGRADES.find(u => u.level === currentLevel + 1);
+
   return (
-    <div className="flex flex-col items-center w-full space-y-6">
-      <div className="w-full max-w-md flex justify-end">
+    <div className="flex flex-col items-center w-full space-y-6 pb-20">
+      <div className="w-full max-w-md flex justify-between items-center px-2">
+        <div className="flex items-center space-x-2">
+          <div className="bg-primary/10 p-2 rounded-lg">
+             <Zap className="w-4 h-4 text-primary" />
+          </div>
+          <span className="text-xs font-bold">Lvl {currentLevel} (${localTapPower}/tap)</span>
+        </div>
         <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
           <LogOut className="w-4 h-4 mr-2" /> Logout
         </Button>
       </div>
 
       <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary overflow-hidden">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="text-2xl font-bold flex items-center justify-center">
             <Coins className="w-8 h-8 mr-2 text-primary" /> TapBoost
           </CardTitle>
@@ -145,58 +187,107 @@ export default function TapToEarn() {
             </div>
             <div className="text-center pt-2 border-t">
                <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Your Earnings</span>
-               <span className="text-3xl font-black text-primary">${localEarnings.toFixed(3)}</span>
+               <span className="text-4xl font-black text-primary">${localEarnings.toFixed(3)}</span>
             </div>
           </div>
 
           <motion.div whileTap={{ scale: 0.95 }}>
-            <Button onClick={handleTap} size="lg" className="w-full h-20 text-xl font-black shadow-lg hover:scale-[1.02] transition-all bg-primary hover:bg-primary/90 rounded-2xl">
-              <MousePointerClick className="mr-2 h-8 w-8" /> TAP TO EARN
+            <Button onClick={handleTap} size="lg" className="w-full h-24 text-2xl font-black shadow-lg hover:scale-[1.02] transition-all bg-primary hover:bg-primary/90 rounded-2xl flex-col">
+              <MousePointerClick className="mb-1 h-8 w-8" />
+              <span>TAP TO EARN</span>
+              <span className="text-[10px] font-normal opacity-80">+${localTapPower} / tap</span>
             </Button>
           </motion.div>
 
-          <div className="space-y-3 pt-6 border-t mt-4 text-left">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Withdraw to MiniPay</h3>
-              {isConnected && (
-                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center">
-                  <Wallet className="h-2 w-2 mr-1" /> Ready
-                </span>
-              )}
-            </div>
-
-            <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Select Asset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USDT">Tether (USDT)</SelectItem>
-                <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
-                <SelectItem value="cUSD">Celo Dollar (cUSD)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              placeholder="Your Celo/MiniPay Address"
-              value={cryptoWalletAddress}
-              onChange={(e) => setCryptoWalletAddress(e.target.value)}
-              className="h-10 text-xs font-mono"
-            />
-
-            <Button
-              onClick={handleWithdraw}
-              disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
-              className="w-full h-12 font-bold rounded-xl"
-            >
-              {isLoading ? 'Processing Blockchain...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Earnings</>}
-            </Button>
+          <Tabs defaultValue="withdraw" className="w-full mt-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="withdraw"><Wallet className="w-4 h-4 mr-2" /> Wallet</TabsTrigger>
+              <TabsTrigger value="upgrade"><TrendingUp className="w-4 h-4 mr-2" /> Boost</TabsTrigger>
+            </TabsList>
             
-            {localEarnings < 5.0 && (
-              <p className="text-[10px] text-center text-muted-foreground italic">
-                Keep tapping! Minimum withdrawal is $5.00
-              </p>
-            )}
-          </div>
+            <TabsContent value="withdraw" className="space-y-4 text-left">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Withdraw to MiniPay</h3>
+                {isConnected && (
+                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center">
+                    <Wallet className="h-2 w-2 mr-1" /> Ready
+                  </span>
+                )}
+              </div>
+
+              <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select Asset" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                  <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
+                  <SelectItem value="cUSD">Celo Dollar (cUSD)</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Your Celo/MiniPay Address"
+                value={cryptoWalletAddress}
+                onChange={(e) => setCryptoWalletAddress(e.target.value)}
+                className="h-10 text-xs font-mono"
+              />
+
+              <Button
+                onClick={handleWithdraw}
+                disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
+                className="w-full h-12 font-bold rounded-xl"
+              >
+                {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Earnings</>}
+              </Button>
+              
+              {localEarnings < 5.0 && (
+                <p className="text-[10px] text-center text-muted-foreground italic">
+                  Keep tapping! Minimum withdrawal is $5.00
+                </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="upgrade" className="space-y-4">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 text-left">
+                <h4 className="font-bold text-sm mb-1 flex items-center">
+                  <Zap className="w-4 h-4 mr-1 text-primary" /> Next Level Boost
+                </h4>
+                {nextUpgrade ? (
+                  <>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Upgrade to Level {nextUpgrade.level} to earn <span className="font-bold text-primary">${nextUpgrade.power}</span> per tap.
+                    </p>
+                    <div className="flex justify-between items-center bg-white dark:bg-black/20 p-2 rounded-lg border">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Cost</span>
+                        <span className="text-lg font-black">${nextUpgrade.cost.toFixed(2)}</span>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        onClick={handleUpgrade}
+                        disabled={isLoading || localEarnings < nextUpgrade.cost}
+                        className="font-bold"
+                      >
+                        {localEarnings >= nextUpgrade.cost ? 'Buy Upgrade' : 'Need More Balance'}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">You've reached the maximum tap level!</p>
+                )}
+              </div>
+              
+              <div className="text-left pt-2">
+                <h4 className="font-bold text-[10px] uppercase text-muted-foreground mb-2 flex items-center">
+                  <CreditCard className="w-3 h-3 mr-1" /> Deposit via PesaPal
+                </h4>
+                <Button variant="outline" className="w-full h-10 text-xs font-bold" onClick={() => toast({ title: "Coming Soon", description: "PesaPal deposits are being verified." })}>
+                  Add Funds for Upgrades
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

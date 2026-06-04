@@ -2,14 +2,17 @@ export interface UserProfile {
   username: string;
   loyaltyPoints: number;
   points: number;
+  earnings: number;
   avatarUrl?: string;
   createdAt: string;
   membershipTier: 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+  tapLevel: number;
+  tapPower: number;
 }
 
 export interface Transaction {
   userId: string;
-  type: 'WITHDRAWAL' | 'DEPOSIT' | 'EARN';
+  type: 'WITHDRAWAL' | 'DEPOSIT' | 'EARN' | 'UPGRADE';
   method?: string;
   asset?: string;
   amount: number;
