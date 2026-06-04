@@ -3,6 +3,13 @@
 
 A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Celo network. Earn real rewards by tapping, with automated payouts directly to your wallet.
 
+## 🔗 PesaPal Integration Details
+
+To receive automatic upgrades after a purchase, you **must** configure your PesaPal Merchant Dashboard with the following:
+
+1.  **Website Domain:** `https://tapboost.vercel.app/`
+2.  **IPN Listener Url:** `https://tapboost.vercel.app/api/pesapal/ipn`
+
 ## 🚀 How to Fix "403 Permission Denied" or "Authentication Failed"
 
 If you get a `403` error even after using your token, it means the token was created without the correct permissions.
@@ -51,6 +58,7 @@ This app is optimized for Vercel. Follow these steps to go live:
    - `TREASURY_PRIVATE_KEY`: Your 0x... private key.
    - `PESAPAL_CONSUMER_KEY`: Your PesaPal Key.
    - `PESAPAL_CONSUMER_SECRET`: Your PesaPal Secret.
+   - `PESAPAL_ENVIRONMENT`: `sandbox` or `live`.
 
 3. **Deploy:** Click **Deploy**.
 
@@ -58,5 +66,6 @@ This app is optimized for Vercel. Follow these steps to go live:
 
 - **PWA Support:** Installable on home screen with "Standalone" mode.
 - **Persistent Earnings:** Balance and Tap Level ($0.30 - $1.10) saved in Firestore.
+- **Real-time Currency:** Live conversion for KES, UGX, TZS, and RWF.
 - **Celo Payouts:** Instant USDT/USDC/cUSD withdrawals for MiniPay users.
-- **PesaPal Ready:** Infrastructure ready for deposit integration.
+- **PesaPal Ready:** Direct purchase for tap power boosts.
