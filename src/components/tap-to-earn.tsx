@@ -12,6 +12,7 @@ import { useUser } from '@/context/UserContext';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getExchangeRates, CURRENCIES, ExchangeRates } from '@/lib/currency-service';
 
 import LeaderboardCard from '@/components/leaderboard-card';
 import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, Globe } from 'lucide-react';
@@ -23,14 +24,6 @@ const UPGRADES = [
   { level: 4, power: 0.700, cost: 15.0 },
   { level: 5, power: 0.900, cost: 35.0 },
   { level: 6, power: 1.100, cost: 75.0 },
-];
-
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', rate: 1 },
-  { code: 'KES', symbol: 'KSh', rate: 130 },
-  { code: 'UGX', symbol: 'USh', rate: 3700 },
-  { code: 'TZS', symbol: 'TSh', rate: 2600 },
-  { code: 'RWF', symbol: 'RF', rate: 1250 },
 ];
 
 export default function TapToEarn() {
@@ -46,6 +39,15 @@ export default function TapToEarn() {
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [cryptoAsset, setCryptoAsset] = useState('USDT');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({ USD: 1 });
+
+  useEffect(() => {
+    async function loadRates() {
+      const rates = await getExchangeRates();
+      setExchangeRates(rates);
+    }
+    loadRates();
+  }, []);
 
   useEffect(() => {
     if (userData) {
@@ -61,9 +63,17 @@ export default function TapToEarn() {
     [selectedCurrency]
   );
 
+  const currentRate = useMemo(() => 
+    exchangeRates[selectedCurrency] || 1,
+    [exchangeRates, selectedCurrency]
+  );
+
   const formatValue = (usdValue: number) => {
-    const converted = usdValue * currencyInfo.rate;
-    return `${currencyInfo.symbol} ${converted.toLocaleString(undefined, { minimumFractionDigits: currencyInfo.code === 'USD' ? 3 : 0, maximumFractionDigits: currencyInfo.code === 'USD' ? 3 : 0 })}`;
+    const converted = usdValue * currentRate;
+    return `${currencyInfo.symbol} ${converted.toLocaleString(undefined, { 
+      minimumFractionDigits: selectedCurrency === 'USD' ? 3 : 2, 
+      maximumFractionDigits: selectedCurrency === 'USD' ? 3 : 2 
+    })}`;
   };
 
   const loadLeaderboard = useCallback(async () => {

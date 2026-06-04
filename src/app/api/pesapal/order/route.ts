@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateUser } from '@/lib/auth-utils';
 import { getUserProfile } from '@/lib/db-utils';
 import { submitOrder, registerIPN } from '@/lib/pesapal-service';
+import { getExchangeRates } from '@/lib/currency-service';
 
 const UPGRADES = [
   { level: 1, power: 0.300, cost: 0 },
@@ -13,14 +14,6 @@ const UPGRADES = [
   { level: 5, power: 0.900, cost: 35.0 },
   { level: 6, power: 1.100, cost: 75.0 },
 ];
-
-const CONVERSION_RATES: Record<string, number> = {
-  USD: 1,
-  KES: 130,
-  UGX: 3700,
-  TZS: 2600,
-  RWF: 1250,
-};
 
 export async function POST(request: NextRequest) {
   const authResult = await authenticateUser(request);
@@ -44,7 +37,8 @@ export async function POST(request: NextRequest) {
     if (!ipnId) return NextResponse.json({ message: 'Failed to register PesaPal IPN' }, { status: 500 });
 
     const currencyCode = preferredCurrency || 'USD';
-    const rate = CONVERSION_RATES[currencyCode] || 1;
+    const rates = await getExchangeRates();
+    const rate = rates[currencyCode] || 1;
     const localizedAmount = upgrade.cost * rate;
 
     const orderData = {
