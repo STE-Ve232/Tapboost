@@ -3,31 +3,29 @@
 
 A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Celo network. Earn real rewards by tapping, with automated payouts directly to your wallet.
 
-## 🚀 How to Fix "Authentication Failed" for GitHub
+## 🚀 How to Fix "403 Permission Denied" or "Authentication Failed"
 
-GitHub requires a **Personal Access Token (PAT)** instead of your password. 
+If you get a `403` error even after using your token, it means the token was created without the correct permissions.
 
-### 1. Generate a GitHub Token
-1. Go to [GitHub Token Settings](https://github.com/settings/tokens).
-2. Click **Generate new token (classic)**.
-3. Give it a name (e.g., "TapBoost-Dev").
-4. Select the **'repo'** checkbox scope.
-5. Click **Generate token** and **COPY IT** immediately.
+### 1. Fix your Token Permissions
+1. Go to your [GitHub Token Settings](https://github.com/settings/tokens).
+2. Find the token you created or generate a **New token (classic)**.
+3. **CRITICAL:** You must check the box that says **'repo'** (Full control of private repositories).
+4. Scroll to the bottom and click **Generate token**.
+5. Copy the new token.
 
 ### 2. Update your remote URL (The Fix)
-Run this command in your terminal. **IMPORTANT: Remove the < and > symbols.** 
-
-Replace `YOUR_TOKEN` with the code you copied:
+Run this command in your terminal. **Replace `YOUR_NEW_TOKEN` with the code you copied.** 
 
 ```bash
-git remote set-url origin https://YOUR_TOKEN@github.com/STE-Ve232/Tapboost.git
+git remote set-url origin https://YOUR_NEW_TOKEN@github.com/STE-Ve232/Tapboost.git
 ```
 
-### 3. Push your commits
-Now run the push command again:
+### 3. Clear existing credentials (If 403 persists)
+If it still says "Permission Denied", your computer might be trying to use an old saved password. Force it to use the token by running:
 
 ```bash
-git push origin main
+git push https://YOUR_NEW_TOKEN@github.com/STE-Ve232/Tapboost.git main
 ```
 
 ## 🛠 Deployment to Vercel
