@@ -5,20 +5,28 @@ A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Ce
 
 ## 🚀 How to Push Changes to GitHub
 
-Whenever you make changes and want to update your repository:
+GitHub requires a **Personal Access Token (PAT)** instead of your password. 
+
+### 1. Generate a GitHub Token
+1. Go to [GitHub Token Settings](https://github.com/settings/tokens).
+2. Click **Generate new token (classic)**.
+3. Give it a name (e.g., "TapBoost-Dev").
+4. Select the **'repo'** checkbox scope.
+5. Click **Generate token** and **COPY IT** immediately.
+
+### 2. Update your local project
+Run this command in your terminal (replace `<YOUR_TOKEN>` with the token you just copied):
 
 ```bash
-# 1. Stage all changes
-git add .
-
-# 2. Commit your changes
-git commit -m "Update tap power rates and PWA setup"
-
-# 3. Push to GitHub
-git push origin main
+git remote set-url origin https://<YOUR_TOKEN>@github.com/STE-Ve232/Tapboost.git
 ```
 
-*Note: If you haven't connected your local folder to GitHub yet, follow the "First Time Setup" section below.*
+### 3. Push your commits
+Now run the push command:
+
+```bash
+git push origin main
+```
 
 ## 🛠 Deployment to Vercel
 
