@@ -57,3 +57,16 @@ export async function submitOrder(orderData: any) {
     return null;
   }
 }
+
+export async function getTransactionStatus(orderTrackingId: string) {
+  const token = await getPesaPalToken();
+  try {
+    const response = await axios.get(`${PESAPAL_BASE_URL}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('PesaPal Status Error:', error);
+    return null;
+  }
+}

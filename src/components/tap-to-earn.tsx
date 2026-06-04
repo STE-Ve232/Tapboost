@@ -69,7 +69,7 @@ export default function TapToEarn() {
   const handleTap = async () => {
     if (!user) return;
     
-    // Optimistic UI updates based on current persistent tapPower
+    // Optimistic UI updates
     setLocalTaps(prev => prev + 1);
     setLocalEarnings(prev => prev + localTapPower);
 
@@ -109,24 +109,28 @@ export default function TapToEarn() {
     if (!user || !userData) return;
     setIsLoading(true);
     try {
-      const currentLevel = userData.tapLevel || 1;
-      const nextUpgrade = UPGRADES.find(u => u.level === currentLevel + 1);
-      
-      if (!nextUpgrade) {
-        toast({ title: "Max Level", description: "You have reached the maximum level." });
-        return;
-      }
-
-      // In a real app, this would redirect to PesaPal payment page
-      // For now, we simulate the intent and notify coming soon
-      toast({ 
-        title: "PesaPal Purchase", 
-        description: `Redirecting to pay $${nextUpgrade.cost.toFixed(2)} via PesaPal... (Feature coming once IPN is verified)`,
-        variant: "default"
+      const response = await fetch('/api/pesapal/order', {
+        method: 'POST',
+        headers: { 'x-user-id': user.uid }
       });
       
+      const result = await response.json();
+      
+      if (response.ok && result.redirectUrl) {
+        toast({ 
+          title: "Redirecting", 
+          description: "Sending you to PesaPal to complete your purchase...",
+        });
+        window.location.href = result.redirectUrl;
+      } else {
+        toast({ 
+          title: "Purchase Error", 
+          description: result.message || "Failed to initiate payment.", 
+          variant: "destructive" 
+        });
+      }
     } catch (err) {
-      toast({ title: "Purchase Error", description: "Failed to initiate PesaPal payment.", variant: "destructive" });
+      toast({ title: "Purchase Error", description: "Network error occurred.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -326,7 +330,7 @@ export default function TapToEarn() {
               
               <div className="text-left pt-2">
                 <p className="text-[10px] text-muted-foreground text-center">
-                  Purchasing a boost with PesaPal credits your upgrade immediately without using your earned tapping balance.
+                  Purchasing a boost with PesaPal credits your upgrade immediately once the payment is confirmed.
                 </p>
               </div>
             </TabsContent>
