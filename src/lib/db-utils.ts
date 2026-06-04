@@ -3,39 +3,44 @@ import { doc, getDoc, setDoc, updateDoc, increment, collection, query, orderBy, 
 import { UserProfile, Transaction } from '@/types/user';
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  if (!db) return null;
+  if (!db || !userId) return null;
   
   const userRef = doc(db, 'users', userId);
-  const userSnap = await getDoc(userRef);
+  try {
+    const userSnap = await getDoc(userRef);
 
-  if (!userSnap.exists()) {
-    const newUser: UserProfile = {
-      username: `User_${userId.slice(-4)}`,
-      loyaltyPoints: 0,
-      points: 0,
-      earnings: 0,
-      avatarUrl: `https://picsum.photos/seed/${userId}/150/150`,
-      createdAt: new Date().toISOString(),
-      membershipTier: 'Bronze',
-      tapLevel: 1,
-      tapPower: 0.300,
-    };
-    await setDoc(userRef, newUser);
-    return newUser;
+    if (!userSnap.exists()) {
+      const newUser: UserProfile = {
+        username: `User_${userId.slice(-4)}`,
+        loyaltyPoints: 0,
+        points: 0,
+        earnings: 0,
+        avatarUrl: `https://picsum.photos/seed/${userId}/150/150`,
+        createdAt: new Date().toISOString(),
+        membershipTier: 'Bronze',
+        tapLevel: 1,
+        tapPower: 0.300,
+      };
+      await setDoc(userRef, newUser);
+      return newUser;
+    }
+
+    const data = userSnap.data();
+    return {
+      ...data,
+      tapLevel: data.tapLevel || 1,
+      tapPower: data.tapPower || 0.300,
+      earnings: data.earnings || 0,
+      points: data.points || 0
+    } as UserProfile;
+  } catch (error) {
+    console.error("Firestore getDoc error:", error);
+    return null;
   }
-
-  const data = userSnap.data();
-  return {
-    ...data,
-    tapLevel: data.tapLevel || 1,
-    tapPower: data.tapPower || 0.300,
-    earnings: data.earnings || 0,
-    points: data.points || 0
-  } as UserProfile;
 }
 
 export async function incrementUserPoints(userId: string, points: number, earnings: number) {
-  if (!db) return;
+  if (!db || !userId) return;
   const userRef = doc(db, 'users', userId);
   await updateDoc(userRef, {
     points: increment(points),
@@ -44,13 +49,20 @@ export async function incrementUserPoints(userId: string, points: number, earnin
 }
 
 export async function upgradeUserTapPower(userId: string, cost: number, newLevel: number, newPower: number) {
-  if (!db) return;
+  if (!db || !userId) return;
   const userRef = doc(db, 'users', userId);
-  await updateDoc(userRef, {
-    earnings: increment(-cost),
+  
+  // If cost is 0, it's a direct PesaPal purchase (or initial lvl 1)
+  const updates: any = {
     tapLevel: newLevel,
     tapPower: newPower
-  });
+  };
+  
+  if (cost > 0) {
+    updates.earnings = increment(-cost);
+  }
+  
+  await updateDoc(userRef, updates);
 }
 
 export async function checkUserBalance(userId: string, amount: number): Promise<boolean> {

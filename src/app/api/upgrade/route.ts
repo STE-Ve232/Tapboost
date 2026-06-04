@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const profile = await getUserProfile(authResult.userId);
-    if (!profile) return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    if (!profile) {
+      return NextResponse.json({ message: 'User profile not found. Please try refreshing.' }, { status: 404 });
+    }
 
     const currentLevel = profile.tapLevel || 1;
     const nextUpgrade = UPGRADES.find(u => u.level === currentLevel + 1);
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (profile.earnings < nextUpgrade.cost) {
-      return NextResponse.json({ message: 'Insufficient balance' }, { status: 400 });
+      return NextResponse.json({ message: 'Insufficient balance for upgrade.' }, { status: 400 });
     }
 
     await upgradeUserTapPower(authResult.userId, nextUpgrade.cost, nextUpgrade.level, nextUpgrade.power);
@@ -51,6 +53,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Upgrade error:', error);
-    return NextResponse.json({ message: 'Failed to process upgrade' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal server error during upgrade' }, { status: 500 });
   }
 }

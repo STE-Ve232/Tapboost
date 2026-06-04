@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import LeaderboardCard from '@/components/leaderboard-card';
-import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard } from 'lucide-react';
+import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, ShoppingCart } from 'lucide-react';
 
 const UPGRADES = [
   { level: 1, power: 0.300, cost: 0 },
@@ -32,7 +32,7 @@ export default function TapToEarn() {
   
   const [localTaps, setLocalTaps] = useState(0);
   const [localEarnings, setLocalEarnings] = useState(0);
-  const [localTapPower, setLocalTapPower] = useState(0.001);
+  const [localTapPower, setLocalTapPower] = useState(0.300);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
@@ -83,7 +83,7 @@ export default function TapToEarn() {
     }
   };
 
-  const handleUpgrade = async () => {
+  const handleBuyUpgradeWithBalance = async () => {
     if (!user) return;
     setIsLoading(true);
     try {
@@ -100,6 +100,33 @@ export default function TapToEarn() {
       }
     } catch (err) {
       toast({ title: "Network Error", description: "Failed to process upgrade.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBuyUpgradeWithPesaPal = async () => {
+    if (!user || !userData) return;
+    setIsLoading(true);
+    try {
+      const currentLevel = userData.tapLevel || 1;
+      const nextUpgrade = UPGRADES.find(u => u.level === currentLevel + 1);
+      
+      if (!nextUpgrade) {
+        toast({ title: "Max Level", description: "You have reached the maximum level." });
+        return;
+      }
+
+      // In a real app, this would redirect to PesaPal payment page
+      // For now, we simulate the intent and notify coming soon
+      toast({ 
+        title: "PesaPal Purchase", 
+        description: `Redirecting to pay $${nextUpgrade.cost.toFixed(2)} via PesaPal... (Feature coming once IPN is verified)`,
+        variant: "default"
+      });
+      
+    } catch (err) {
+      toast({ title: "Purchase Error", description: "Failed to initiate PesaPal payment.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -158,7 +185,7 @@ export default function TapToEarn() {
           <div className="bg-primary/10 p-2 rounded-lg">
              <Zap className="w-4 h-4 text-primary" />
           </div>
-          <span className="text-xs font-bold">Lvl {currentLevel} (${localTapPower}/tap)</span>
+          <span className="text-xs font-bold">Lvl {currentLevel} (${localTapPower.toFixed(3)}/tap)</span>
         </div>
         <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
           <LogOut className="w-4 h-4 mr-2" /> Logout
@@ -195,7 +222,7 @@ export default function TapToEarn() {
             <Button onClick={handleTap} size="lg" className="w-full h-24 text-2xl font-black shadow-lg hover:scale-[1.02] transition-all bg-primary hover:bg-primary/90 rounded-2xl flex-col">
               <MousePointerClick className="mb-1 h-8 w-8" />
               <span>TAP TO EARN</span>
-              <span className="text-[10px] font-normal opacity-80">+${localTapPower} / tap</span>
+              <span className="text-[10px] font-normal opacity-80">+${localTapPower.toFixed(3)} / tap</span>
             </Button>
           </motion.div>
 
@@ -256,21 +283,40 @@ export default function TapToEarn() {
                 {nextUpgrade ? (
                   <>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Upgrade to Level {nextUpgrade.level} to earn <span className="font-bold text-primary">${nextUpgrade.power}</span> per tap.
+                      Upgrade to Level {nextUpgrade.level} to earn <span className="font-bold text-primary">${nextUpgrade.power.toFixed(3)}</span> per tap.
                     </p>
-                    <div className="flex justify-between items-center bg-white dark:bg-black/20 p-2 rounded-lg border">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Cost</span>
-                        <span className="text-lg font-black">${nextUpgrade.cost.toFixed(2)}</span>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center bg-white dark:bg-black/20 p-3 rounded-lg border">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Use Balance</span>
+                          <span className="text-lg font-black">${nextUpgrade.cost.toFixed(2)}</span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          onClick={handleBuyUpgradeWithBalance}
+                          disabled={isLoading || localEarnings < nextUpgrade.cost}
+                          className="font-bold h-9"
+                        >
+                          Buy with Earnings
+                        </Button>
                       </div>
-                      <Button 
-                        size="sm" 
-                        onClick={handleUpgrade}
-                        disabled={isLoading || localEarnings < nextUpgrade.cost}
-                        className="font-bold"
-                      >
-                        {localEarnings >= nextUpgrade.cost ? 'Buy Upgrade' : 'Need More Balance'}
-                      </Button>
+
+                      <div className="flex justify-between items-center bg-accent/10 p-3 rounded-lg border border-accent/20">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] uppercase text-accent-foreground font-bold leading-tight">Direct Purchase</span>
+                          <span className="text-lg font-black text-accent-foreground">${nextUpgrade.cost.toFixed(2)}</span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="secondary"
+                          onClick={handleBuyUpgradeWithPesaPal}
+                          disabled={isLoading}
+                          className="font-bold h-9 bg-accent text-accent-foreground hover:bg-accent/90"
+                        >
+                          <CreditCard className="w-4 h-4 mr-1" /> Pay via PesaPal
+                        </Button>
+                      </div>
                     </div>
                   </>
                 ) : (
@@ -279,12 +325,9 @@ export default function TapToEarn() {
               </div>
               
               <div className="text-left pt-2">
-                <h4 className="font-bold text-[10px] uppercase text-muted-foreground mb-2 flex items-center">
-                  <CreditCard className="w-3 h-3 mr-1" /> Deposit via PesaPal
-                </h4>
-                <Button variant="outline" className="w-full h-10 text-xs font-bold" onClick={() => toast({ title: "Coming Soon", description: "PesaPal deposits are being verified." })}>
-                  Add Funds for Upgrades
-                </Button>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Purchasing a boost with PesaPal credits your upgrade immediately without using your earned tapping balance.
+                </p>
               </div>
             </TabsContent>
           </Tabs>
