@@ -31,37 +31,50 @@ export async function POST(request: NextRequest) {
 
     if (!upgrade) return NextResponse.json({ message: 'Max level reached' }, { status: 400 });
 
+    // PesaPal V3 requires a registered IPN ID. 
+    // We try to register the IPN for this specific domain.
     const ipnUrl = `${request.nextUrl.origin}/api/pesapal/ipn`;
+    console.log(`Registering PesaPal IPN for: ${ipnUrl}`);
     const ipnId = await registerIPN(ipnUrl);
 
-    if (!ipnId) return NextResponse.json({ message: 'Failed to register PesaPal IPN' }, { status: 500 });
+    if (!ipnId) {
+      console.error('Failed to register PesaPal IPN. Ensure Consumer Key/Secret are correct and the domain is allowed.');
+      return NextResponse.json({ message: 'Failed to register PesaPal IPN. Check server logs.' }, { status: 500 });
+    }
 
     const currencyCode = preferredCurrency || 'USD';
     const rates = await getExchangeRates();
     const rate = rates[currencyCode] || 1;
     const localizedAmount = upgrade.cost * rate;
 
+    // Merchant reference format: upgrade_<userId>_<nextLevel>_<timestamp>
+    const merchantReference = `up_${authResult.userId.slice(-6)}_${nextLevel}_${Date.now()}`;
+
     const orderData = {
-      id: `upgrade_${authResult.userId}_${nextLevel}_${Date.now()}`,
+      id: merchantReference,
       currency: currencyCode,
       amount: parseFloat(localizedAmount.toFixed(2)),
       description: `TapBoost Level ${nextLevel} Upgrade`,
       callback_url: `${request.nextUrl.origin}/`,
       notification_id: ipnId,
       billing_address: {
-        email_address: authResult.userId + "@tapboost.app"
+        email_address: `${authResult.userId}@tapboost.app`,
+        first_name: profile.username || 'Tapper',
+        last_name: 'User'
       }
     };
 
+    console.log('Submitting PesaPal Order:', JSON.stringify(orderData, null, 2));
     const result = await submitOrder(orderData);
 
     if (result && result.redirect_url) {
       return NextResponse.json({ redirectUrl: result.redirect_url });
     } else {
-      return NextResponse.json({ message: 'Failed to initiate PesaPal payment' }, { status: 500 });
+      console.error('PesaPal Order Submission failed. Result:', result);
+      return NextResponse.json({ message: 'PesaPal rejected the order. Check credentials and currency support.' }, { status: 500 });
     }
-  } catch (error) {
-    console.error('Order API error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('PesaPal Order API Error:', error);
+    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }

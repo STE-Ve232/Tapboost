@@ -154,6 +154,7 @@ export default function TapToEarn() {
     if (!user || !userData) return;
     setIsLoading(true);
     try {
+      console.log('Initiating PesaPal Order...');
       const response = await fetch('/api/pesapal/order', {
         method: 'POST',
         headers: { 
@@ -169,10 +170,12 @@ export default function TapToEarn() {
         toast({ title: "Redirecting", description: "Sending you to PesaPal..." });
         window.location.href = result.redirectUrl;
       } else {
+        console.error('PesaPal Order Response:', result);
         toast({ title: "Purchase Error", description: result.message || "Failed to initiate payment.", variant: "destructive" });
       }
     } catch (err) {
-      toast({ title: "Purchase Error", description: "Network error occurred.", variant: "destructive" });
+      console.error('PesaPal Click Handler Error:', err);
+      toast({ title: "Purchase Error", description: "Network error occurred. Check your connection.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
