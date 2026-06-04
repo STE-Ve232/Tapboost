@@ -26,6 +26,9 @@ const UPGRADES = [
   { level: 6, power: 1.100, cost: 75.0 },
 ];
 
+const MIN_PESAPAL_WITHDRAWAL_USD = 10.0;
+const MIN_CRYPTO_WITHDRAWAL_USD = 5.0;
+
 export default function TapToEarn() {
   const { address, isConnected } = useAccount();
   const { user, userData, refreshUserData } = useUser();
@@ -188,8 +191,13 @@ export default function TapToEarn() {
 
   const handleCryptoWithdraw = async () => {
     if (!user || !cryptoWalletAddress) return;
-    if (localEarnings < 5.0) {
-      toast({ title: "Withdrawal Error", description: "Minimum $5.00 required.", variant: "destructive" });
+
+    if (localEarnings < MIN_CRYPTO_WITHDRAWAL_USD) {
+      toast({ 
+        title: "Withdrawal Error", 
+        description: `Minimum withdrawal is ${formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}.`, 
+        variant: "destructive" 
+      });
       return;
     }
     
@@ -203,7 +211,7 @@ export default function TapToEarn() {
         },
         body: JSON.stringify({ 
           walletAddress: cryptoWalletAddress, 
-          amount: localEarnings, 
+          amount: localEarnings, // Send the full USD balance
           asset: cryptoAsset 
         }),
       });
@@ -224,23 +232,34 @@ export default function TapToEarn() {
   };
 
   const handlePesaPalWithdraw = async () => {
-    if (!user) return;
+    if (!user || !currentRate) return;
     
-    const amount = parseFloat(payoutAmount);
-    if (isNaN(amount) || amount <= 0) {
+    const amountInLocalCurrency = parseFloat(payoutAmount);
+    if (isNaN(amountInLocalCurrency) || amountInLocalCurrency <= 0) {
       toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" });
       return;
     }
 
-    if (localEarnings < amount) {
-      toast({ title: "Error", description: "Insufficient balance.", variant: "destructive" });
+    const amountInUSD = amountInLocalCurrency / currentRate;
+
+    if (amountInUSD < MIN_PESAPAL_WITHDRAWAL_USD) {
+      toast({ 
+        title: "Amount Too Low", 
+        description: `The minimum withdrawal amount is ${formatValue(MIN_PESAPAL_WITHDRAWAL_USD)}.`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (localEarnings < amountInUSD) {
+      toast({ title: "Error", description: "Insufficient balance for this withdrawal amount.", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
     try {
         const payload = {
-            amount,
+            amount: amountInUSD, // Send the amount in USD
             payoutType,
             recipient: payoutType === 'bank' ? bankRecipient : cardRecipient,
         };
@@ -384,18 +403,18 @@ export default function TapToEarn() {
 
                         <Button
                             onClick={handleCryptoWithdraw}
-                            disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
+                            disabled={isLoading || localEarnings < MIN_CRYPTO_WITHDRAWAL_USD || !cryptoWalletAddress}
                             className="w-full h-12 font-bold rounded-xl"
                         >
                             {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw via MiniPay</>}
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground italic">
-                            Min. withdrawal: $5.00 ({formatValue(5)})
+                            Min. withdrawal: {formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}
                         </p>
                     </TabsContent>
                     <TabsContent value="pesapal" className="space-y-2 text-left">
                         <Input 
-                            placeholder="Amount to Withdraw"
+                            placeholder={`Amount to Withdraw (${currencyInfo.symbol})`}
                             type="number"
                             value={payoutAmount}
                             onChange={(e) => setPayoutAmount(e.target.value)}
@@ -436,7 +455,7 @@ export default function TapToEarn() {
                                 {isLoading ? 'Processing...' : <><Banknote className="mr-2 h-4 w-4" /> Withdraw</>}
                             </Button>
                             <p className="text-[10px] text-center text-muted-foreground italic pt-2">
-                                Min. withdrawal: $10.00 ({formatValue(10)}). Funds arrive in 1-3 business days.
+                                Min. withdrawal: {formatValue(MIN_PESAPAL_WITHDRAWAL_USD)}. Funds arrive in 1-3 business days.
                             </p>
                         </div>
                     </TabsContent>
