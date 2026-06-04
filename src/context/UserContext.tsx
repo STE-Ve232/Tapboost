@@ -1,45 +1,58 @@
 
 "use client";
 
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
+// Define a type for the user data object
+interface UserProfile {
+  // Add properties that you expect in your user data
+  // For example:
+  earnings: number;
+  points: number;
+  tapLevel: number;
+  tapPower: number;
+  currency: string;
+  // Add any other fields from your user profile
+}
+
 interface UserContextType {
   user: User | null;
-  userData: any;
+  userData: UserProfile | null;
   loading: boolean;
   error: any;
-  refreshUserData: () => Promise<void>;
+  refreshUserData: () => Promise<UserProfile | null>; // Updated return type
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<any>(null);
 
-  const fetchProfile = async (uid: string) => {
+  const fetchProfile = useCallback(async (uid: string): Promise<UserProfile | null> => {
     try {
       const response = await fetch('/api/user', {
         headers: { 'x-user-id': uid }
       });
       if (response.ok) {
-        const data = await response.json();
+        const data: UserProfile = await response.json();
         setUserData(data);
+        return data;
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
+      setError(err);
     }
-  };
+    return null;
+  }, []);
 
   useEffect(() => {
-    // Safety timeout: stop loading if Firebase takes too long to initialize
     const timeout = setTimeout(() => {
       if (loading) {
-        console.warn("User auth timeout reached, forcing loading false.");
         setLoading(false);
       }
     }, 5000);
@@ -65,13 +78,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       unsubscribe();
       clearTimeout(timeout);
     };
-  }, []);
+  }, [fetchProfile, loading]);
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async (): Promise<UserProfile | null> => {
     if (user) {
-      await fetchProfile(user.uid);
+      return await fetchProfile(user.uid);
     }
-  };
+    return null;
+  }, [user, fetchProfile]);
 
   return (
     <UserContext.Provider value={{ user, userData, loading, error, refreshUserData }}>
