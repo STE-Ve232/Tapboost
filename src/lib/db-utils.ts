@@ -20,6 +20,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         membershipTier: 'Bronze',
         tapLevel: 1,
         tapPower: 0.300,
+        currency: 'USD'
       };
       await setDoc(userRef, newUser);
       return newUser;
@@ -31,12 +32,19 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       tapLevel: data.tapLevel || 1,
       tapPower: data.tapPower || 0.300,
       earnings: data.earnings || 0,
-      points: data.points || 0
+      points: data.points || 0,
+      currency: data.currency || 'USD'
     } as UserProfile;
   } catch (error) {
     console.error("Firestore getDoc error:", error);
     return null;
   }
+}
+
+export async function updateUserCurrency(userId: string, currency: string) {
+  if (!db || !userId) return;
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, { currency });
 }
 
 export async function incrementUserPoints(userId: string, points: number, earnings: number) {
@@ -52,7 +60,6 @@ export async function upgradeUserTapPower(userId: string, cost: number, newLevel
   if (!db || !userId) return;
   const userRef = doc(db, 'users', userId);
   
-  // If cost is 0, it's a direct PesaPal purchase (or initial lvl 1)
   const updates: any = {
     tapLevel: newLevel,
     tapPower: newPower

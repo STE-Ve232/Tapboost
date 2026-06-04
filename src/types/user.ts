@@ -2,12 +2,13 @@ export interface UserProfile {
   username: string;
   loyaltyPoints: number;
   points: number;
-  earnings: number;
+  earnings: number; // Stored as USD base
   avatarUrl?: string;
   createdAt: string;
   membershipTier: 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
   tapLevel: number;
   tapPower: number;
+  currency?: string; // e.g., 'USD', 'KES', 'UGX', 'TZS', 'RWF'
 }
 
 export interface Transaction {

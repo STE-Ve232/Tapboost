@@ -14,6 +14,14 @@ const UPGRADES = [
   { level: 6, power: 1.100, cost: 75.0 },
 ];
 
+const CONVERSION_RATES: Record<string, number> = {
+  USD: 1,
+  KES: 130,
+  UGX: 3700,
+  TZS: 2600,
+  RWF: 1250,
+};
+
 export async function POST(request: NextRequest) {
   const authResult = await authenticateUser(request);
   if (!authResult.authenticated) {
@@ -21,6 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { currency: preferredCurrency } = await request.json();
     const profile = await getUserProfile(authResult.userId);
     if (!profile) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
@@ -29,21 +38,24 @@ export async function POST(request: NextRequest) {
 
     if (!upgrade) return NextResponse.json({ message: 'Max level reached' }, { status: 400 });
 
-    // Register IPN first (or use an existing ID if you cache it)
     const ipnUrl = `${request.nextUrl.origin}/api/pesapal/ipn`;
     const ipnId = await registerIPN(ipnUrl);
 
     if (!ipnId) return NextResponse.json({ message: 'Failed to register PesaPal IPN' }, { status: 500 });
 
+    const currencyCode = preferredCurrency || 'USD';
+    const rate = CONVERSION_RATES[currencyCode] || 1;
+    const localizedAmount = upgrade.cost * rate;
+
     const orderData = {
       id: `upgrade_${authResult.userId}_${nextLevel}_${Date.now()}`,
-      currency: "USD",
-      amount: upgrade.cost,
+      currency: currencyCode,
+      amount: parseFloat(localizedAmount.toFixed(2)),
       description: `TapBoost Level ${nextLevel} Upgrade`,
       callback_url: `${request.nextUrl.origin}/`,
       notification_id: ipnId,
       billing_address: {
-        email_address: authResult.userId + "@tapboost.app" // Placeholder since we don't always have email
+        email_address: authResult.userId + "@tapboost.app"
       }
     };
 

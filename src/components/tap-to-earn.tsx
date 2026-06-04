@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { signOut } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import LeaderboardCard from '@/components/leaderboard-card';
-import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, ShoppingCart } from 'lucide-react';
+import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, Globe } from 'lucide-react';
 
 const UPGRADES = [
   { level: 1, power: 0.300, cost: 0 },
@@ -23,6 +23,14 @@ const UPGRADES = [
   { level: 4, power: 0.700, cost: 15.0 },
   { level: 5, power: 0.900, cost: 35.0 },
   { level: 6, power: 1.100, cost: 75.0 },
+];
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', rate: 1 },
+  { code: 'KES', symbol: 'KSh', rate: 130 },
+  { code: 'UGX', symbol: 'USh', rate: 3700 },
+  { code: 'TZS', symbol: 'TSh', rate: 2600 },
+  { code: 'RWF', symbol: 'RF', rate: 1250 },
 ];
 
 export default function TapToEarn() {
@@ -37,14 +45,26 @@ export default function TapToEarn() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [cryptoAsset, setCryptoAsset] = useState('USDT');
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
 
   useEffect(() => {
     if (userData) {
       setLocalTaps(userData.points || 0);
       setLocalEarnings(userData.earnings || 0);
       setLocalTapPower(userData.tapPower || 0.300);
+      setSelectedCurrency(userData.currency || 'USD');
     }
   }, [userData]);
+
+  const currencyInfo = useMemo(() => 
+    CURRENCIES.find(c => c.code === selectedCurrency) || CURRENCIES[0],
+    [selectedCurrency]
+  );
+
+  const formatValue = (usdValue: number) => {
+    const converted = usdValue * currencyInfo.rate;
+    return `${currencyInfo.symbol} ${converted.toLocaleString(undefined, { minimumFractionDigits: currencyInfo.code === 'USD' ? 3 : 0, maximumFractionDigits: currencyInfo.code === 'USD' ? 3 : 0 })}`;
+  };
 
   const loadLeaderboard = useCallback(async () => {
     try {
@@ -66,13 +86,28 @@ export default function TapToEarn() {
     }
   }, [isConnected, address]);
 
+  const handleCurrencyChange = async (newCurrency: string) => {
+    if (!user) return;
+    setSelectedCurrency(newCurrency);
+    try {
+      await fetch('/api/user/update-currency', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.uid 
+        },
+        body: JSON.stringify({ currency: newCurrency })
+      });
+      await refreshUserData();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update currency preference." });
+    }
+  };
+
   const handleTap = async () => {
     if (!user) return;
-    
-    // Optimistic UI updates
     setLocalTaps(prev => prev + 1);
     setLocalEarnings(prev => prev + localTapPower);
-
     try {
       await fetch('/api/tap', { 
         method: 'POST',
@@ -111,23 +146,20 @@ export default function TapToEarn() {
     try {
       const response = await fetch('/api/pesapal/order', {
         method: 'POST',
-        headers: { 'x-user-id': user.uid }
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.uid 
+        },
+        body: JSON.stringify({ currency: selectedCurrency })
       });
       
       const result = await response.json();
       
       if (response.ok && result.redirectUrl) {
-        toast({ 
-          title: "Redirecting", 
-          description: "Sending you to PesaPal to complete your purchase...",
-        });
+        toast({ title: "Redirecting", description: "Sending you to PesaPal..." });
         window.location.href = result.redirectUrl;
       } else {
-        toast({ 
-          title: "Purchase Error", 
-          description: result.message || "Failed to initiate payment.", 
-          variant: "destructive" 
-        });
+        toast({ title: "Purchase Error", description: result.message || "Failed to initiate payment.", variant: "destructive" });
       }
     } catch (err) {
       toast({ title: "Purchase Error", description: "Network error occurred.", variant: "destructive" });
@@ -189,11 +221,24 @@ export default function TapToEarn() {
           <div className="bg-primary/10 p-2 rounded-lg">
              <Zap className="w-4 h-4 text-primary" />
           </div>
-          <span className="text-xs font-bold">Lvl {currentLevel} (${localTapPower.toFixed(3)}/tap)</span>
+          <span className="text-[10px] font-bold">Lvl {currentLevel} ({formatValue(localTapPower)}/tap)</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive">
-          <LogOut className="w-4 h-4 mr-2" /> Logout
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Select value={selectedCurrency} onValueChange={handleCurrencyChange}>
+            <SelectTrigger className="w-[80px] h-8 text-[10px] border-none bg-muted/50">
+              <Globe className="w-3 h-3 mr-1" />
+              <SelectValue placeholder="Cur" />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map(c => (
+                <SelectItem key={c.code} value={c.code} className="text-[10px]">{c.code}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive h-8 text-[10px]">
+            <LogOut className="w-3 h-3 mr-1" /> Logout
+          </Button>
+        </div>
       </div>
 
       <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary overflow-hidden">
@@ -218,7 +263,7 @@ export default function TapToEarn() {
             </div>
             <div className="text-center pt-2 border-t">
                <span className="text-muted-foreground block text-xs uppercase font-bold mb-1">Your Earnings</span>
-               <span className="text-4xl font-black text-primary">${localEarnings.toFixed(3)}</span>
+               <span className="text-4xl font-black text-primary">{formatValue(localEarnings)}</span>
             </div>
           </div>
 
@@ -226,7 +271,7 @@ export default function TapToEarn() {
             <Button onClick={handleTap} size="lg" className="w-full h-24 text-2xl font-black shadow-lg hover:scale-[1.02] transition-all bg-primary hover:bg-primary/90 rounded-2xl flex-col">
               <MousePointerClick className="mb-1 h-8 w-8" />
               <span>TAP TO EARN</span>
-              <span className="text-[10px] font-normal opacity-80">+${localTapPower.toFixed(3)} / tap</span>
+              <span className="text-[10px] font-normal opacity-80">+{formatValue(localTapPower)} / tap</span>
             </Button>
           </motion.div>
 
@@ -239,11 +284,6 @@ export default function TapToEarn() {
             <TabsContent value="withdraw" className="space-y-4 text-left">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Withdraw to MiniPay</h3>
-                {isConnected && (
-                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold flex items-center">
-                    <Wallet className="h-2 w-2 mr-1" /> Ready
-                  </span>
-                )}
               </div>
 
               <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
@@ -272,11 +312,9 @@ export default function TapToEarn() {
                 {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Earnings</>}
               </Button>
               
-              {localEarnings < 5.0 && (
-                <p className="text-[10px] text-center text-muted-foreground italic">
-                  Keep tapping! Minimum withdrawal is $5.00
-                </p>
-              )}
+              <p className="text-[10px] text-center text-muted-foreground italic">
+                Min. withdrawal: $5.00 ({formatValue(5)})
+              </p>
             </TabsContent>
 
             <TabsContent value="upgrade" className="space-y-4">
@@ -287,14 +325,14 @@ export default function TapToEarn() {
                 {nextUpgrade ? (
                   <>
                     <p className="text-xs text-muted-foreground mb-3">
-                      Upgrade to Level {nextUpgrade.level} to earn <span className="font-bold text-primary">${nextUpgrade.power.toFixed(3)}</span> per tap.
+                      Upgrade to Level {nextUpgrade.level} to earn <span className="font-bold text-primary">{formatValue(nextUpgrade.power)}</span> per tap.
                     </p>
                     
                     <div className="space-y-3">
                       <div className="flex justify-between items-center bg-white dark:bg-black/20 p-3 rounded-lg border">
                         <div className="flex flex-col">
                           <span className="text-[10px] uppercase text-muted-foreground font-bold leading-tight">Use Balance</span>
-                          <span className="text-lg font-black">${nextUpgrade.cost.toFixed(2)}</span>
+                          <span className="text-lg font-black">{formatValue(nextUpgrade.cost)}</span>
                         </div>
                         <Button 
                           size="sm" 
@@ -309,7 +347,7 @@ export default function TapToEarn() {
                       <div className="flex justify-between items-center bg-accent/10 p-3 rounded-lg border border-accent/20">
                         <div className="flex flex-col">
                           <span className="text-[10px] uppercase text-accent-foreground font-bold leading-tight">Direct Purchase</span>
-                          <span className="text-lg font-black text-accent-foreground">${nextUpgrade.cost.toFixed(2)}</span>
+                          <span className="text-lg font-black text-accent-foreground">{formatValue(nextUpgrade.cost)}</span>
                         </div>
                         <Button 
                           size="sm" 
@@ -326,12 +364,6 @@ export default function TapToEarn() {
                 ) : (
                   <p className="text-xs text-muted-foreground italic">You've reached the maximum tap level!</p>
                 )}
-              </div>
-              
-              <div className="text-left pt-2">
-                <p className="text-[10px] text-muted-foreground text-center">
-                  Purchasing a boost with PesaPal credits your upgrade immediately once the payment is confirmed.
-                </p>
               </div>
             </TabsContent>
           </Tabs>
