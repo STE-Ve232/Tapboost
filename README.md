@@ -15,10 +15,12 @@ GitHub requires a **Personal Access Token (PAT)** instead of your password.
 5. Click **Generate token** and **COPY IT** immediately.
 
 ### 2. Update your remote URL (The Fix)
-Run this command in your terminal. Replace `<YOUR_TOKEN>` with the token you just copied:
+Run this command in your terminal. **IMPORTANT: Remove the < and > symbols.** 
+
+Replace `YOUR_TOKEN` with the code you copied:
 
 ```bash
-git remote set-url origin https://<YOUR_TOKEN>@github.com/STE-Ve232/Tapboost.git
+git remote set-url origin https://YOUR_TOKEN@github.com/STE-Ve232/Tapboost.git
 ```
 
 ### 3. Push your commits
