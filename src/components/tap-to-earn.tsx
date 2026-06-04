@@ -40,11 +40,10 @@ export default function TapToEarn() {
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   
-  // Withdrawal states
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [cryptoAsset, setCryptoAsset] = useState('USDT');
   const [payoutAmount, setPayoutAmount] = useState('');
-  const [payoutType, setPayoutType] = useState('bank'); // 'bank' or 'card'
+  const [payoutType, setPayoutType] = useState('bank');
 
   const [bankRecipient, setBankRecipient] = useState({ firstName: '', lastName: '', accountNumber: '', bankCode: '' });
   const [cardRecipient, setCardRecipient] = useState({ firstName: '', lastName: '', cardNumber: '', expiryMonth: '', expiryYear: '', cvv: '' });
@@ -113,10 +112,7 @@ export default function TapToEarn() {
     try {
       await fetch('/api/user/update-currency', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.uid 
-        },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.uid },
         body: JSON.stringify({ currency: newCurrency })
       });
       await refreshUserData();
@@ -130,52 +126,22 @@ export default function TapToEarn() {
     setLocalTaps(prev => prev + 1);
     setLocalEarnings(prev => prev + localTapPower);
     try {
-      await fetch('/api/tap', { 
-        method: 'POST',
-        headers: { 'x-user-id': user.uid }
-      });
+      await fetch('/api/tap', { method: 'POST', headers: { 'x-user-id': user.uid } });
     } catch (err) {
       toast({ title: "Sync Error", description: "Couldn't save your tap.", variant: "destructive" });
     }
   };
-
-  const handleBuyUpgradeWithBalance = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/upgrade', {
-        method: 'POST',
-        headers: { 'x-user-id': user.uid }
-      });
-      const result = await response.json();
-      if (response.ok) {
-        toast({ title: "Success!", description: result.message });
-        await refreshUserData();
-      } else {
-        toast({ title: "Upgrade Failed", description: result.message, variant: "destructive" });
-      }
-    } catch (err) {
-      toast({ title: "Network Error", description: "Failed to process upgrade.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   const handleBuyUpgradeWithPesaPal = async () => {
     if (!user || !userData) return;
     setIsLoading(true);
     try {
       const response = await fetch('/api/pesapal/order', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.uid 
-        },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.uid },
         body: JSON.stringify({ currency: selectedCurrency })
       });
-      
       const result = await response.json();
-      
       if (response.ok && result.redirectUrl) {
         toast({ title: "Redirecting", description: "Sending you to PesaPal..." });
         window.location.href = result.redirectUrl;
@@ -192,32 +158,31 @@ export default function TapToEarn() {
   const handleCryptoWithdraw = async () => {
     if (!user || !cryptoWalletAddress) return;
 
+    setIsLoading(true);
+    await refreshUserData(); // Refresh to get the latest server state first.
+
+    // Re-check minimums against the fresh data.
     if (localEarnings < MIN_CRYPTO_WITHDRAWAL_USD) {
       toast({ 
         title: "Withdrawal Error", 
-        description: `Minimum withdrawal is ${formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}.`, 
+        description: `Your confirmed balance is below the minimum of ${formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}.`, 
         variant: "destructive" 
       });
+      setIsLoading(false);
       return;
     }
     
-    setIsLoading(true);
     try {
       const response = await fetch('/api/withdraw/crypto', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user.uid
-        },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.uid },
         body: JSON.stringify({ 
           walletAddress: cryptoWalletAddress, 
-          amount: localEarnings, // Send the full USD balance
+          amount: localEarnings,
           asset: cryptoAsset 
         }),
       });
-
       const result = await response.json();
-
       if (response.ok) {
         toast({ title: "Success!", description: result.message });
         await refreshUserData();
@@ -234,13 +199,25 @@ export default function TapToEarn() {
   const handlePesaPalWithdraw = async () => {
     if (!user || !currentRate) return;
     
+    setIsLoading(true);
+    await refreshUserData(); // THE FIX: Refresh to get the latest server state first.
+
     const amountInLocalCurrency = parseFloat(payoutAmount);
+
     if (isNaN(amountInLocalCurrency) || amountInLocalCurrency <= 0) {
       toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" });
+      setIsLoading(false);
       return;
     }
 
     const amountInUSD = amountInLocalCurrency / currentRate;
+
+    // Check against the freshly updated localEarnings.
+    if (localEarnings < amountInUSD) {
+      toast({ title: "Insufficient Balance", description: "Your confirmed balance is less than the requested withdrawal amount.", variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
 
     if (amountInUSD < MIN_PESAPAL_WITHDRAWAL_USD) {
       toast({ 
@@ -248,37 +225,26 @@ export default function TapToEarn() {
         description: `The minimum withdrawal amount is ${formatValue(MIN_PESAPAL_WITHDRAWAL_USD)}.`, 
         variant: "destructive" 
       });
+      setIsLoading(false);
       return;
     }
 
-    if (localEarnings < amountInUSD) {
-      toast({ title: "Error", description: "Insufficient balance for this withdrawal amount.", variant: "destructive" });
-      return;
-    }
-
-    setIsLoading(true);
     try {
         const payload = {
-            amount: amountInUSD, // Send the amount in USD
+            amount: amountInUSD,
             payoutType,
             recipient: payoutType === 'bank' ? bankRecipient : cardRecipient,
         };
-
         const response = await fetch('/api/withdraw/pesapal', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-user-id': user.uid,
-            },
+            headers: { 'Content-Type': 'application/json', 'x-user-id': user.uid },
             body: JSON.stringify(payload),
         });
-
         const result = await response.json();
-
         if (response.ok) {
             toast({ title: 'Payout Submitted', description: result.message });
-            await refreshUserData();
             setPayoutAmount('');
+            await refreshUserData();
         } else {
             toast({ title: 'Payout Failed', description: result.message, variant: 'destructive' });
         }
@@ -307,28 +273,20 @@ export default function TapToEarn() {
   };
 
   const currentLevel = userData?.tapLevel || 1;
-  const nextUpgrade = UPGRADES.find(u => u.level === currentLevel + 1);
 
   return (
     <div className="flex flex-col items-center w-full space-y-6 pb-20">
       <div className="w-full max-w-md flex justify-between items-center px-2">
         <div className="flex items-center space-x-2">
-          <div className="bg-primary/10 p-2 rounded-lg">
-             <Zap className="w-4 h-4 text-primary" />
-          </div>
+          <div className="bg-primary/10 p-2 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
           <span className="text-[10px] font-bold">Lvl {currentLevel} ({formatValue(localTapPower)}/tap)</span>
         </div>
         <div className="flex items-center space-x-2">
           <Select value={selectedCurrency} onValueChange={handleCurrencyChange}>
             <SelectTrigger className="w-[80px] h-8 text-[10px] border-none bg-muted/50">
-              <Globe className="w-3 h-3 mr-1" />
-              <SelectValue placeholder="Cur" />
+              <Globe className="w-3 h-3 mr-1" /><SelectValue placeholder="Cur" />
             </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map(c => (
-                <SelectItem key={c.code} value={c.code} className="text-[10px]">{c.code}</SelectItem>
-              ))}
-            </SelectContent>
+            <SelectContent>{CURRENCIES.map(c => <SelectItem key={c.code} value={c.code} className="text-[10px]">{c.code}</SelectItem>)}</SelectContent>
           </Select>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive h-8 text-[10px]">
             <LogOut className="w-3 h-3 mr-1" /> Logout
@@ -338,9 +296,7 @@ export default function TapToEarn() {
 
       <Card className="w-full max-w-md text-center rounded-2xl shadow-xl border-t-4 border-t-primary overflow-hidden">
         <CardHeader className="pb-2">
-          <CardTitle className="text-2xl font-bold flex items-center justify-center">
-            <Coins className="w-8 h-8 mr-2 text-primary" /> TapBoost
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold flex items-center justify-center"><Coins className="w-8 h-8 mr-2 text-primary" /> TapBoost</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-muted/50 p-4 rounded-xl border">
@@ -351,9 +307,7 @@ export default function TapToEarn() {
               </div>
               <div className="text-left">
                 <span className="text-muted-foreground block text-xs uppercase font-bold">User</span>
-                <span className="text-lg font-semibold truncate block w-full">
-                  {user?.displayName || 'Tapper'}
-                </span>
+                <span className="text-lg font-semibold truncate block w-full">{user?.displayName || 'Tapper'}</span>
               </div>
             </div>
             <div className="text-center pt-2 border-t">
@@ -375,7 +329,6 @@ export default function TapToEarn() {
               <TabsTrigger value="main-withdraw"><Wallet className="w-4 h-4 mr-2" /> Wallet</TabsTrigger>
               <TabsTrigger value="main-upgrade"><TrendingUp className="w-4 h-4 mr-2" /> Boost</TabsTrigger>
             </TabsList>
-            
             <TabsContent value="main-withdraw">
                 <Tabs defaultValue="crypto" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -383,42 +336,22 @@ export default function TapToEarn() {
                         <TabsTrigger value="pesapal">Bank/Card</TabsTrigger>
                     </TabsList>
                     <TabsContent value="crypto" className="space-y-4 text-left">
-                        <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
-                            <SelectTrigger className="h-10">
-                                <SelectValue placeholder="Select Asset" />
-                            </SelectTrigger>
+                        <Select onValueChange={setCryptoAsset} defaultValue="USDT">
+                            <SelectTrigger className="h-10"><SelectValue placeholder="Select Asset" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="USDT">Tether (USDT)</SelectItem>
                                 <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
                                 <SelectItem value="cUSD">Celo Dollar (cUSD)</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        <Input
-                            placeholder="Your Celo/MiniPay Address"
-                            value={cryptoWalletAddress}
-                            onChange={(e) => setCryptoWalletAddress(e.target.value)}
-                            className="h-10 text-xs font-mono"
-                        />
-
-                        <Button
-                            onClick={handleCryptoWithdraw}
-                            disabled={isLoading || localEarnings < MIN_CRYPTO_WITHDRAWAL_USD || !cryptoWalletAddress}
-                            className="w-full h-12 font-bold rounded-xl"
-                        >
-                            {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw via MiniPay</>}
+                        <Input placeholder="Your Celo/MiniPay Address" value={cryptoWalletAddress} onChange={(e) => setCryptoWalletAddress(e.target.value)} className="h-10 text-xs font-mono" />
+                        <Button onClick={handleCryptoWithdraw} disabled={isLoading || !cryptoWalletAddress} className="w-full h-12 font-bold rounded-xl">
+                            {isLoading ? 'Checking...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Full Balance</>}
                         </Button>
-                        <p className="text-[10px] text-center text-muted-foreground italic">
-                            Min. withdrawal: {formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}
-                        </p>
+                        <p className="text-[10px] text-center text-muted-foreground italic">Min. withdrawal: {formatValue(MIN_CRYPTO_WITHDRAWAL_USD)}</p>
                     </TabsContent>
                     <TabsContent value="pesapal" className="space-y-2 text-left">
-                        <Input 
-                            placeholder={`Amount to Withdraw (${currencyInfo.symbol})`}
-                            type="number"
-                            value={payoutAmount}
-                            onChange={(e) => setPayoutAmount(e.target.value)}
-                        />
+                        <Input placeholder={`Amount to Withdraw (${currencyInfo.symbol})`} type="number" value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} />
                         <Tabs defaultValue="bank" onValueChange={setPayoutType} className="w-full pt-2">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="bank">To Bank</TabsTrigger>
@@ -445,24 +378,15 @@ export default function TapToEarn() {
                                 </div>
                             </TabsContent>
                         </Tabs>
-
                         <div className="pt-2">
-                            <Button
-                                onClick={handlePesaPalWithdraw}
-                                disabled={isPesapalWithdrawDisabled()}
-                                className="w-full h-12 font-bold rounded-xl bg-green-600 hover:bg-green-700"
-                            >
-                                {isLoading ? 'Processing...' : <><Banknote className="mr-2 h-4 w-4" /> Withdraw</>}
+                            <Button onClick={handlePesaPalWithdraw} disabled={isPesapalWithdrawDisabled()} className="w-full h-12 font-bold rounded-xl bg-green-600 hover:bg-green-700">
+                                {isLoading ? 'Verifying...' : <><Banknote className="mr-2 h-4 w-4" /> Withdraw</>}
                             </Button>
-                            <p className="text-[10px] text-center text-muted-foreground italic pt-2">
-                                Min. withdrawal: {formatValue(MIN_PESAPAL_WITHDRAWAL_USD)}. Funds arrive in 1-3 business days.
-                            </p>
+                            <p className="text-[10px] text-center text-muted-foreground italic pt-2">Min. withdrawal: {formatValue(MIN_PESAPAL_WITHDRAWAL_USD)}. Funds arrive in 1-3 business days.</p>
                         </div>
                     </TabsContent>
                 </Tabs>
             </TabsContent>
-
-            <TabsContent value="main-upgrade">{/* ... upgrade content ... */}</TabsContent>
           </Tabs>
         </CardContent>
       </Card>
