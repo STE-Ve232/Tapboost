@@ -5,17 +5,17 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccount } from 'wagmi';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/context/UserContext';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getExchangeRates, CURRENCIES, ExchangeRates } from '@/lib/currency-service';
 
 import LeaderboardCard from '@/components/leaderboard-card';
-import { Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, Globe } from 'lucide-react';
+import { Banknote, Coins, LogOut, Send, MousePointerClick, Wallet, Zap, TrendingUp, CreditCard, Globe } from 'lucide-react';
 
 const UPGRADES = [
   { level: 1, power: 0.300, cost: 0 },
@@ -36,8 +36,15 @@ export default function TapToEarn() {
   const [localTapPower, setLocalTapPower] = useState(0.300);
   const [isLoading, setIsLoading] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  
+  // Crypto withdrawal states
   const [cryptoWalletAddress, setCryptoWalletAddress] = useState('');
   const [cryptoAsset, setCryptoAsset] = useState('USDT');
+
+  // PesaPal withdrawal states
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [recipient, setRecipient] = useState({ firstName: '', lastName: '', accountNumber: '', bankCode: '' });
+
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({ USD: 1 });
 
@@ -154,7 +161,6 @@ export default function TapToEarn() {
     if (!user || !userData) return;
     setIsLoading(true);
     try {
-      console.log('Initiating PesaPal Order...');
       const response = await fetch('/api/pesapal/order', {
         method: 'POST',
         headers: { 
@@ -170,19 +176,17 @@ export default function TapToEarn() {
         toast({ title: "Redirecting", description: "Sending you to PesaPal..." });
         window.location.href = result.redirectUrl;
       } else {
-        console.error('PesaPal Order Response:', result);
         toast({ title: "Purchase Error", description: result.message || "Failed to initiate payment.", variant: "destructive" });
       }
     } catch (err) {
-      console.error('PesaPal Click Handler Error:', err);
-      toast({ title: "Purchase Error", description: "Network error occurred. Check your connection.", variant: "destructive" });
+      toast({ title: "Purchase Error", description: "Network error occurred.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleWithdraw = async () => {
-    if (!user) return;
+  const handleCryptoWithdraw = async () => {
+    if (!user || !cryptoWalletAddress) return;
     if (localEarnings < 5.0) {
       toast({ title: "Withdrawal Error", description: "Minimum $5.00 required.", variant: "destructive" });
       return;
@@ -212,11 +216,53 @@ export default function TapToEarn() {
         toast({ title: "Error", description: result.message, variant: "destructive" });
       }
     } catch (error) {
-      toast({ title: "Network Error", description: "Failed to process payout.", variant: "destructive" });
+      toast({ title: "Network Error", description: "Failed to process crypto payout.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handlePesaPalWithdraw = async () => {
+    if (!user) return;
+    
+    const amount = parseFloat(payoutAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" });
+      return;
+    }
+
+    if (localEarnings < amount) {
+      toast({ title: "Error", description: "Insufficient balance.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+        const response = await fetch('/api/withdraw/pesapal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': user.uid,
+            },
+            body: JSON.stringify({ amount, recipient }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            toast({ title: 'Payout Submitted', description: result.message });
+            await refreshUserData();
+            setPayoutAmount('');
+        } else {
+            toast({ title: 'Payout Failed', description: result.message, variant: 'destructive' });
+        }
+    } catch (error) {
+        toast({ title: 'Network Error', description: 'Failed to submit payout request.', variant: 'destructive' });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   const handleLogout = async () => {
     if (!firebaseAuth) return;
@@ -288,49 +334,77 @@ export default function TapToEarn() {
             </Button>
           </motion.div>
 
-          <Tabs defaultValue="withdraw" className="w-full mt-6">
+          <Tabs defaultValue="main-withdraw" className="w-full mt-6">
             <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="withdraw"><Wallet className="w-4 h-4 mr-2" /> Wallet</TabsTrigger>
-              <TabsTrigger value="upgrade"><TrendingUp className="w-4 h-4 mr-2" /> Boost</TabsTrigger>
+              <TabsTrigger value="main-withdraw"><Wallet className="w-4 h-4 mr-2" /> Wallet</TabsTrigger>
+              <TabsTrigger value="main-upgrade"><TrendingUp className="w-4 h-4 mr-2" /> Boost</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="withdraw" className="space-y-4 text-left">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Withdraw to MiniPay</h3>
-              </div>
+            <TabsContent value="main-withdraw">
+                <Tabs defaultValue="crypto" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                        <TabsTrigger value="crypto">MiniPay (Crypto)</TabsTrigger>
+                        <TabsTrigger value="pesapal">Bank/Card</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="crypto" className="space-y-4 text-left">
+                        <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
+                            <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Select Asset" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="USDT">Tether (USDT)</SelectItem>
+                                <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
+                                <SelectItem value="cUSD">Celo Dollar (cUSD)</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-              <Select onValueChange={(value) => setCryptoAsset(value)} defaultValue="USDT">
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select Asset" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USDT">Tether (USDT)</SelectItem>
-                  <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
-                  <SelectItem value="cUSD">Celo Dollar (cUSD)</SelectItem>
-                </SelectContent>
-              </Select>
+                        <Input
+                            placeholder="Your Celo/MiniPay Address"
+                            value={cryptoWalletAddress}
+                            onChange={(e) => setCryptoWalletAddress(e.target.value)}
+                            className="h-10 text-xs font-mono"
+                        />
 
-              <Input
-                placeholder="Your Celo/MiniPay Address"
-                value={cryptoWalletAddress}
-                onChange={(e) => setCryptoWalletAddress(e.target.value)}
-                className="h-10 text-xs font-mono"
-              />
+                        <Button
+                            onClick={handleCryptoWithdraw}
+                            disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
+                            className="w-full h-12 font-bold rounded-xl"
+                        >
+                            {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw via MiniPay</>}
+                        </Button>
+                        <p className="text-[10px] text-center text-muted-foreground italic">
+                            Min. withdrawal: $5.00 ({formatValue(5)})
+                        </p>
+                    </TabsContent>
+                    <TabsContent value="pesapal" className="space-y-4 text-left">
+                        <Input 
+                            placeholder="Amount to Withdraw"
+                            type="number"
+                            value={payoutAmount}
+                            onChange={(e) => setPayoutAmount(e.target.value)}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                           <Input placeholder="First Name" value={recipient.firstName} onChange={e => setRecipient({...recipient, firstName: e.target.value})} />
+                           <Input placeholder="Last Name" value={recipient.lastName} onChange={e => setRecipient({...recipient, lastName: e.target.value})} />
+                        </div>
+                        <Input placeholder="Account Number" value={recipient.accountNumber} onChange={e => setRecipient({...recipient, accountNumber: e.target.value})} />
+                        <Input placeholder="Bank Code (e.g., 254003)" value={recipient.bankCode} onChange={e => setRecipient({...recipient, bankCode: e.target.value})} />
 
-              <Button
-                onClick={handleWithdraw}
-                disabled={isLoading || localEarnings < 5.0 || !cryptoWalletAddress}
-                className="w-full h-12 font-bold rounded-xl"
-              >
-                {isLoading ? 'Processing...' : <><Send className="mr-2 h-4 w-4" /> Withdraw Earnings</>}
-              </Button>
-              
-              <p className="text-[10px] text-center text-muted-foreground italic">
-                Min. withdrawal: $5.00 ({formatValue(5)})
-              </p>
+                        <Button
+                            onClick={handlePesaPalWithdraw}
+                            disabled={isLoading || !payoutAmount || !recipient.accountNumber || !recipient.bankCode || !recipient.firstName || !recipient.lastName}
+                            className="w-full h-12 font-bold rounded-xl bg-green-600 hover:bg-green-700"
+                        >
+                            {isLoading ? 'Processing...' : <><Banknote className="mr-2 h-4 w-4" /> Withdraw to Bank</>}
+                        </Button>
+                        <p className="text-[10px] text-center text-muted-foreground italic">
+                            Min. withdrawal: $10.00 ({formatValue(10)}). Funds arrive in 1-3 business days.
+                        </p>
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
 
-            <TabsContent value="upgrade" className="space-y-4">
+            <TabsContent value="main-upgrade" className="space-y-4">
               <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 text-left">
                 <h4 className="font-bold text-sm mb-1 flex items-center">
                   <Zap className="w-4 h-4 mr-1 text-primary" /> Next Level Boost
