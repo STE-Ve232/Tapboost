@@ -3,7 +3,7 @@
 
 A high-performance "Tap to Earn" Mini App built for the MiniPay wallet on the Celo network. Earn real rewards by tapping, with automated payouts directly to your wallet.
 
-## 🚀 How to Push Changes to GitHub
+## 🚀 How to Fix "Authentication Failed" for GitHub
 
 GitHub requires a **Personal Access Token (PAT)** instead of your password. 
 
@@ -14,15 +14,15 @@ GitHub requires a **Personal Access Token (PAT)** instead of your password.
 4. Select the **'repo'** checkbox scope.
 5. Click **Generate token** and **COPY IT** immediately.
 
-### 2. Update your local project
-Run this command in your terminal (replace `<YOUR_TOKEN>` with the token you just copied):
+### 2. Update your remote URL (The Fix)
+Run this command in your terminal. Replace `<YOUR_TOKEN>` with the token you just copied:
 
 ```bash
 git remote set-url origin https://<YOUR_TOKEN>@github.com/STE-Ve232/Tapboost.git
 ```
 
 ### 3. Push your commits
-Now run the push command:
+Now run the push command again:
 
 ```bash
 git push origin main
@@ -32,21 +32,11 @@ git push origin main
 
 This app is optimized for Vercel. Follow these steps to go live:
 
-1. **First Time Setup (if needed):**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/STE-Ve232/Tapboost.git
-   git push -u -f origin main
-   ```
-
-2. **Connect to Vercel:**
+1. **Connect to Vercel:**
    - Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
    - Import your GitHub repository `Tapboost`.
 
-3. **Configure Environment Variables:**
+2. **Configure Environment Variables:**
    In the Vercel project settings, add:
 
    **Firebase:**
@@ -62,7 +52,7 @@ This app is optimized for Vercel. Follow these steps to go live:
    - `PESAPAL_CONSUMER_KEY`: Your PesaPal Key.
    - `PESAPAL_CONSUMER_SECRET`: Your PesaPal Secret.
 
-4. **Deploy:** Click **Deploy**.
+3. **Deploy:** Click **Deploy**.
 
 ## 📱 Features
 
